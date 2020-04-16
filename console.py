@@ -67,8 +67,10 @@ def main():
                 continue
         if command == 'r':
             print(f"{', '.join(r_tile_map[t] for t in solver.rack)}")
+            print(f'{len(solver.rack)} tiles on rack')
         elif command == 't':
             print(f"{', '.join(r_tile_map[t] for t in solver.table)}")
+            print(f'{len(solver.table)} tiles on table')
         elif command == 'ar':
             solver.add_rack([tile_map[c] for c in args])
             print('Added tiles to rack')
