@@ -1,0 +1,4 @@
+auth/*
+.idea
+__pycache__
+*.db
