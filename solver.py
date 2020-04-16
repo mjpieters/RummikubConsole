@@ -27,23 +27,29 @@ class RummikubSolver:
         for i in additions:
             self.rack.append(i)
             self.rack = sorted(self.rack)
-            self.update_arrays()
+        self.update_arrays()
 
     def remove_rack(self, removals):
         for i in removals:
-            self.rack.remove(i)
-            self.update_arrays()
+            try:
+                self.table.remove(i)
+            except ValueError:
+                print(f'{i} not on rack')
+        self.update_arrays()
 
     def add_table(self, additions):
         for i in additions:
             self.table.append(i)
             self.table = sorted(self.table)
-            self.update_arrays()
+        self.update_arrays()
 
     def remove_table(self, removals):
         for i in removals:
-            self.table.remove(i)
-            self.update_arrays()
+            try:
+                self.table.remove(i)
+            except ValueError:
+                print(f'{i} not on table')
+        self.update_arrays()
 
     def solve(self):
         i = range(len(self.tiles))
