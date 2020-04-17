@@ -41,10 +41,10 @@ class SetGenerator:
     def generate_groups(self):
         groups = set()
         for n in range(1, self.numbers + 1):
-            num_group = list(range(n, self.numbers*self.colours + 1, self.numbers))
+            num_group = list(range(n, self.numbers * self.colours + 1, self.numbers))
             for l in range(self.min_len, self.colours + 1):
                 combs = self.clean_jokers([sorted(comb) for comb in combinations(
-                        [*num_group, *[self.tiles[-1] + i for i in range(0, self.jokers)]], l)])
+                    [*num_group, *[self.tiles[-1] + i for i in range(0, self.jokers)]], l)])
                 groups.update(combs)
         return groups
 
