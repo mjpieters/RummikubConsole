@@ -99,6 +99,16 @@ def main():
             if len(args) > 0:
                 solver.remove_table([tile_map[c] for c in args if c])
                 print('Removed tiles from table')
+        elif command == 'r2t':
+            if len(args) > 0:
+                solver.remove_rack([tile_map[c] for c in args if c])
+                solver.add_table([tile_map[c] for c in args if c])
+                print('Placed tiles from rack on table')
+        elif command == 't2r':
+            if len(args) > 0:
+                solver.remove_table([tile_map[c] for c in args if c])
+                solver.add_rack([tile_map[c] for c in args if c])
+                print('Taken tiles from table and placed on rack')
         elif command == 'solve':
             print_solution(solver, r_tile_map)
         elif command == 'stop' or command == 'end' or command == 'quit':
