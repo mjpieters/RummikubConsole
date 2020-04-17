@@ -32,7 +32,7 @@ class RummikubSolver:
     def remove_rack(self, removals):
         for i in removals:
             try:
-                self.table.remove(i)
+                self.rack.remove(i)
             except ValueError:
                 print(f'{i} not on rack')
         self.update_arrays()
