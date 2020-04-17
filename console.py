@@ -73,8 +73,8 @@ def main():
         args = inp.split(' ')[1:]
         for arg in args:
             if arg not in [*tile_map.keys(), None]:
-                print('Invalid input')
-                continue
+                print(f"Invalid argument: '{arg}'")
+                args[:] = [a for a in args if a != arg]
         if command == 'r':
             print(f"{', '.join(r_tile_map[t] for t in solver.rack)}")
             rack_count, rack_c_count = get_tile_count(solver.rack, r_tile_map)
@@ -84,17 +84,21 @@ def main():
             table_count, table_c_count = get_tile_count(solver.table, r_tile_map)
             print(f"{table_count} tiles on table: {', '.join([f'{ct}{c}' for c, ct in table_c_count.items()])}")
         elif command == 'ar':
-            solver.add_rack([tile_map[c] for c in args])
-            print('Added tiles to rack')
+            if len(args) > 0:
+                solver.add_rack([tile_map[c] for c in args if c])
+                print('Added tiles to rack')
         elif command == 'rr':
-            solver.remove_rack([tile_map[c] for c in args])
-            print('Removed tiles from rack')
+            if len(args) > 0:
+                solver.remove_rack([tile_map[c] for c in args if c])
+                print('Removed tiles from rack')
         elif command == 'at':
-            solver.add_table([tile_map[c] for c in args])
-            print('Added tiles to table')
+            if len(args) > 0:
+                solver.add_table([tile_map[c] for c in args if c])
+                print('Added tiles to table')
         elif command == 'rt':
-            solver.remove_table([tile_map[c] for c in args])
-            print('Removed tiles from table')
+            if len(args) > 0:
+                solver.remove_table([tile_map[c] for c in args if c])
+                print('Removed tiles from table')
         elif command == 'solve':
             print_solution(solver, r_tile_map)
         elif command == 'stop' or command == 'end' or command == 'quit':
