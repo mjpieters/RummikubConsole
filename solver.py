@@ -11,15 +11,12 @@ class RummikubSolver:
         self.rack = sorted(rack)
 
         self.sets_matrix = np.array(
-            [np.array([1 if self.tiles[i] in self.sets[j] else 0 for j in range(len(self.sets))]) for i in
+            [np.array([self.sets[j].count(self.tiles[i]) for j in range(len(self.sets))]) for i in
              range(len(self.tiles))])
         self.table_array = np.array([self.table.count(self.tiles[i]) for i in range(len(self.tiles))])
         self.rack_array = np.array([self.rack.count(self.tiles[i]) for i in range(len(self.tiles))])
 
     def update_arrays(self):
-        self.sets_matrix = np.array(
-            [np.array([1 if self.tiles[i] in self.sets[j] else 0 for j in range(len(self.sets))]) for i in
-             range(len(self.tiles))])
         self.table_array = np.array([self.table.count(self.tiles[i]) for i in range(len(self.tiles))])
         self.rack_array = np.array([self.rack.count(self.tiles[i]) for i in range(len(self.tiles))])
 
