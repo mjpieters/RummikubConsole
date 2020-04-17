@@ -65,7 +65,7 @@ def main():
 
     solver = RummikubSolver(tiles=sg.tiles, sets=sg.sets)
 
-    print('Solver initiated...')
+    print('Running...')
 
     while True:
         inp = input()
