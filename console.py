@@ -40,6 +40,16 @@ def print_solution(solver, r_tile_map):
             print('Placed tiles on table')
 
 
+def get_tile_count(tiles, r_tile_map):
+    tiles_list = [r_tile_map[t] for t in tiles]
+    colours = set([t[0] for t in tiles_list])
+    colour_count = {
+        c: len([0 for t in tiles_list if t[0] == c])
+        for c in colours
+    }
+    return len(tiles_list), colour_count
+
+
 def main():
     default_rummikub = console_qa('Default rummikub rules? [Y/n]', '', 'y', 'n')
     if default_rummikub == '' or default_rummikub == 'Y':
@@ -67,10 +77,12 @@ def main():
                 continue
         if command == 'r':
             print(f"{', '.join(r_tile_map[t] for t in solver.rack)}")
-            print(f'{len(solver.rack)} tiles on rack')
+            rack_count, rack_c_count = get_tile_count(solver.rack, r_tile_map)
+            print(f"{rack_count} tiles on rack: {', '.join([f'{ct}{c}' for c, ct in rack_c_count.items()])}")
         elif command == 't':
             print(f"{', '.join(r_tile_map[t] for t in solver.table)}")
-            print(f'{len(solver.table)} tiles on table')
+            table_count, table_c_count = get_tile_count(solver.table, r_tile_map)
+            print(f"{table_count} tiles on table: {', '.join([f'{ct}{c}' for c, ct in table_c_count.items()])}")
         elif command == 'ar':
             solver.add_rack([tile_map[c] for c in args])
             print('Added tiles to rack')
