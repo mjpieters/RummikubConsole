@@ -14,7 +14,7 @@ def console_qa(q, *conditions):
 
 
 def create_number_maps(sg):
-    colours = ['bk', 'bl', 'or', 'rd']
+    colours = ['k', 'b', 'o', 'r']
     verbose_list = [f'{colours[c]}{n}' for c in range(sg.colours) for n in range(1, sg.numbers + 1)]
     verbose_list.append('j')
     tile_map = dict(zip(verbose_list, sg.tiles))
