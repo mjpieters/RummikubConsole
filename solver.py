@@ -4,11 +4,15 @@ import numpy as np
 
 class RummikubSolver:
 
-    def __init__(self, tiles, sets, rack=[], table=[]):
-        self.tiles = tiles
+    def __init__(self, tiles, sets, numbers=13, colours=4, rack=[], table=[]):
+        self.tiles = np.array(tiles)
         self.sets = list(sorted(sets))
         self.table = sorted(table)
         self.rack = sorted(rack)
+
+        self.value = np.array([v for c in range(colours) for v in range(1, numbers+1)])
+        if self.value.shape != self.tiles.shape:
+            self.value = np.append(self.value, 0)
 
         self.sets_matrix = np.array(
             [np.array([self.sets[j].count(self.tiles[i]) for j in range(len(self.sets))]) for i in
@@ -48,18 +52,26 @@ class RummikubSolver:
                 print(f'{i} not on table')
         self.update_arrays()
 
-    def solve(self):
+    def solve(self, maximise='tiles'):
         i = range(len(self.tiles))
         j = range(len(self.sets))
 
         s = self.sets_matrix
         t = self.table_array
         r = self.rack_array
+        v = self.value
 
         x = cp.Variable(len(j), integer=True)
         y = cp.Variable(len(i), integer=True)
 
-        obj = cp.Maximize(cp.sum(y))
+        if maximise == 'tiles':
+            obj = cp.Maximize(cp.sum(y))
+        elif maximise == 'value':
+            obj = cp.Maximize(cp.sum(v*y))
+        else:
+            print('Invalid maximise function')
+            return 0, np.zeros(len(j)), np.zeros(len(i)),
+
         constraints = [
             s @ x == t + y,
             y <= r,
