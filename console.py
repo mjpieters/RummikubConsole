@@ -22,9 +22,9 @@ def create_number_maps(sg):
     return tile_map, r_tile_map
 
 
-def print_solution(solver, r_tile_map):
-    value, tiles, sets = solver.solve()
-    if value == 0:
+def print_solution(solver, r_tile_map, maximise='tiles', initial_meld=False):
+    value, tiles, sets = solver.solve(maximise=maximise, initial_meld=initial_meld)
+    if value == 0 or (initial_meld and value < 30):
         print('No solution found - pick up.')
     else:
         tile_list = [solver.tiles[i] for i in range(len(tiles)) if tiles[i] == 1]
@@ -72,7 +72,7 @@ def main():
         command = inp.split(' ')[0]
         args = inp.split(' ')[1:]
         for arg in args:
-            if arg not in [*tile_map.keys(), None]:
+            if arg not in [*tile_map.keys(), None, 'tiles', 'value', 'initial']:
                 print(f"Invalid argument: '{arg}'")
                 args[:] = [a for a in args if a != arg]
         if command == 'r':
@@ -110,7 +110,15 @@ def main():
                 solver.add_rack([tile_map[c] for c in args if c])
                 print('Taken tiles from table and placed on rack')
         elif command == 'solve':
-            print_solution(solver, r_tile_map)
+            if len(args) > 0:
+                if args[0] == 'tiles':
+                    print_solution(solver, r_tile_map, maximise='tiles')
+                elif args[0] == 'value':
+                    print_solution(solver, r_tile_map, maximise='value')
+                elif args[0] == 'initial':
+                    print_solution(solver, r_tile_map, maximise='value', initial_meld=True)
+            else:
+                print_solution(solver, r_tile_map)
         elif command == 'stop' or command == 'end' or command == 'quit':
             break
         else:

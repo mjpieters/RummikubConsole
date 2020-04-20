@@ -52,12 +52,15 @@ class RummikubSolver:
                 print(f'{i} not on table')
         self.update_arrays()
 
-    def solve(self, maximise='tiles'):
+    def solve(self, maximise='tiles', initial_meld=False):
         i = range(len(self.tiles))
         j = range(len(self.sets))
 
         s = self.sets_matrix
-        t = self.table_array
+        if initial_meld:
+            t = np.zeros(self.table_array.shape)
+        else:
+            t = self.table_array
         r = self.rack_array
         v = self.value
 
