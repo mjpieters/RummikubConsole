@@ -29,7 +29,7 @@ def print_solution(solver, r_tile_map, maximise='tiles', initial_meld=False):
     else:
         tile_list = [solver.tiles[i] for i in range(len(tiles)) if tiles[i] == 1]
         set_list = [solver.sets[i] for i in range(len(sets)) if sets[i] == 1]
-        print(f"Using the following tiles from your rack: {', '.join([r_tile_map[t] for t in tile_list])}")
+        print(f"Using the following tiles from your rack:\n{', '.join([r_tile_map[t] for t in tile_list])}")
         print('Make the following sets:')
         for s in set_list:
             print(f"{', '.join([r_tile_map[t] for t in s])}")
