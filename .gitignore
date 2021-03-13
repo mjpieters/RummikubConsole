@@ -2,3 +2,5 @@ auth/*
 .idea
 __pycache__
 *.db
+.eggs/
+Pipfile.lock

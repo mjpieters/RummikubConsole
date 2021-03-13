@@ -1,5 +1,5 @@
-from set_generator import SetGenerator
-from solver import RummikubSolver
+from .set_generator import SetGenerator
+from .solver import RummikubSolver
 
 
 def console_qa(q, *conditions):
