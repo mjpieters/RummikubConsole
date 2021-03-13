@@ -1,4 +1,5 @@
 from cmd import Cmd
+from textwrap import dedent
 
 from .set_generator import SetGenerator
 from .solver import RummikubSolver
@@ -195,6 +196,28 @@ class SolverConsole(Cmd):
 
     do_end = do_stop
     do_quit = do_stop
+
+    def help_tiles(self):
+        self.message(
+            dedent(
+                """
+            Commands that take tile arguments accept 1 or more tile
+            specifications. Tiles have a _colour_ and a _number_, and you name
+            tiles by combining 1 letter representing the colour of the tile with
+            a number. Any jokers are represented by the letter "j".
+
+            The supported colours are:
+
+            - k: blacK
+            - b: Blue
+            - o: Orange
+            - r: Red
+
+            For example, if you picked a black 13, a red 7 and a joker, you can
+            add these to your rack with the command "addrack k13 r7 j".
+        """
+            )
+        )
 
 
 def console_qa(q, *conditions):

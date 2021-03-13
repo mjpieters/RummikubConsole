@@ -26,33 +26,7 @@ When running the console solver (`rcsolver`) you are first asked if you want to 
 - the number of jokers in the game (0-4)
 - the minimum set length (2-6)
 
-You can then enter one of the following commands:
-
-- `r`: print out your rack contents
-- `t`: show what tiles are on the table
-- `ar [tiles]`: add specific tiles to your rack
-- `rr [tiles]`: remove specific tiles from your rack
-- `at [tiles]`: add specific tiles to the table
-- `rt [tiles]`: remove specific tiles to the table
-- `r2t [tiles]`: move tiles from the table to your rack
-- `t2r [tiles]`: move tiles from your rack to the table
-- `solve (tiles|value|initial)`: present a solution.
-  - You don't have to give a specific argument, `tiles` is the default option. If no solution is possible you will be told to pick tiles instead. If you can place tiles,
-  then you are told what specific tiles to put on the table, and the resulting arrangement
-  of sets is shown.
-  - `solve tiles` tries to maximise the number of tiles placed
-  - `solve value` tries to maximise the total value placed
-  - `solve initial` only uses the tiles on your rack to place 30 points or more.
-- `stop` / `end` / `quit`: exit the solver console
-
-Commands that take `[tiles]` arguments accept 1 or more tile specifications. Tiles have a _colour_ and a _number_, and you name tiles by combining 1 letter representing the colour of the tile with a number. Any jokers are represented by the letter `j`. The supported colours are:
-
-- `k`: <tt>blac**k**</tt>
-- `b`: <tt>**b**lue</tt>
-- `o`: <tt>**o**range</tt>
-- `r`: <tt>**r**ed</tt>
-
-For example, if you picked a black 13, a red 7 and a joker, you can add these to your rack with the command `ar k13 r7 j`.
+You then enter the console command loop. Enter `?` or `h` or `help` to list the available commands, and `help <command>` to get help on what each command does.
 
 [Pipenv]: https://pipenv.readthedocs.io/
 [gh]: https://github.com/Ollie-Hooper/RummikubSolver
