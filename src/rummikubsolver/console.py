@@ -69,7 +69,7 @@ class SolverConsole(Cmd):
         tiles = self._parse_tiles(arg)
         if tiles:
             self._solver.add_rack(tiles)
-            self.message("Added tiles to rack")
+            self.message("Added tiles to your rack")
 
     do_ar = do_addrack
     complete_addrack = _complete_tiles
@@ -95,7 +95,7 @@ class SolverConsole(Cmd):
         tiles = self._parse_tiles(arg)
         if tiles:
             self._solver.add_table(tiles)
-            self.message("Removed tiles to the table")
+            self.message("Added tiles to the table")
 
     do_at = do_addtable
     complete_addtable = _complete_tiles
