@@ -1,11 +1,26 @@
 from cmd import Cmd
 from textwrap import dedent
 
+from colorama import init as colorama_init, Back, Fore, Style
+
 from .set_generator import SetGenerator
 from .solver import RummikubSolver
 
 
 COLOURS = "k", "b", "o", "r"  # blacK, Blue, Orange and Red
+CMAP = {
+    "k": Fore.BLACK + Back.WHITE,
+    "b": Fore.CYAN,
+    "o": Fore.YELLOW,
+    "r": Fore.RED,
+    "j": Fore.WHITE,
+}
+
+
+def _c(t, prefix=None):
+    """Add ANSI colour codes to a tile"""
+    prefix = prefix or t[0]
+    return f"{Style.BRIGHT}{CMAP[prefix]}{t}{Style.RESET_ALL}"
 
 
 class SolverConsole(Cmd):
@@ -13,6 +28,7 @@ class SolverConsole(Cmd):
 
     def __init__(self, sg=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        colorama_init()
         self._tile_map, self._r_tile_map = create_number_maps(sg)
         self._solver = RummikubSolver(tiles=sg.tiles, sets=sg.sets)
 
@@ -27,13 +43,13 @@ class SolverConsole(Cmd):
         Print the tiles on your rack
         """
         self.message(
-            ", ".join(self._r_tile_map[t] for t in self._solver.rack),
+            ", ".join(_c(self._r_tile_map[t]) for t in self._solver.rack),
         )
         rack_count, rack_c_count = get_tile_count(self._solver.rack, self._r_tile_map)
         self.message(
             rack_count,
             "tiles on rack:",
-            ", ".join([f"{ct}{c}" for c, ct in rack_c_count.items()]),
+            ", ".join([_c(f"{ct}{c}", c) for c, ct in rack_c_count.items()]),
         )
 
     do_r = do_rack
@@ -42,14 +58,14 @@ class SolverConsole(Cmd):
         """table | t
         Print the tiles on the table
         """
-        self.message(", ".join(self._r_tile_map[t] for t in self._solver.table))
+        self.message(", ".join(_c(self._r_tile_map[t]) for t in self._solver.table))
         table_count, table_c_count = get_tile_count(
             self._solver.table, self._r_tile_map
         )
         self.message(
             table_count,
             "tiles on table:",
-            ", ".join([f"{ct}{c}" for c, ct in table_c_count.items()]),
+            ", ".join([_c(f"{ct}{c}", c) for c, ct in table_c_count.items()]),
         )
 
     do_t = do_table
@@ -176,10 +192,10 @@ class SolverConsole(Cmd):
         tile_list = [solver.tiles[i] for i, t in enumerate(tiles) if t == 1]
         set_list = [solver.sets[i] for i, s in enumerate(sets) if s == 1]
         self.message("Using the following tiles from your rack:")
-        self.message(", ".join([self._r_tile_map[t] for t in tile_list]))
+        self.message(", ".join([_c(self._r_tile_map[t]) for t in tile_list]))
         self.message("Make the following sets:")
         for s in set_list:
-            self.message(", ".join([self._r_tile_map[t] for t in s]))
+            self.message(", ".join([_c(self._r_tile_map[t]) for t in s]))
 
         auto_add_remove = console_qa(
             "Automatically place tiles for selected solution? [Y/n]", "", "y", "n"
