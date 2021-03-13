@@ -12,3 +12,5 @@ pipenv run rcsolver
 ```
 
 to run the console solver.
+
+[Pipenv]: https://pipenv.readthedocs.io/
