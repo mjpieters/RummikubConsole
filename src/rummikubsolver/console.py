@@ -196,6 +196,7 @@ class SolverConsole(Cmd):
 
     do_end = do_stop
     do_quit = do_stop
+    do_EOF = do_stop
 
     def help_tiles(self):
         self.message(
