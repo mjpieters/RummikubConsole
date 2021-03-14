@@ -23,7 +23,7 @@ class SolverConsole(Cmd):
         print("***", *msg, file=self.stdout)
 
     def do_rack(self, arg):
-        """(r)ack
+        """rack | r
         Print the tiles on your rack
         """
         self.message(
@@ -39,7 +39,7 @@ class SolverConsole(Cmd):
     do_r = do_rack
 
     def do_table(self, arg):
-        """(t)able
+        """table | t
         Print the tiles on the table
         """
         self.message(", ".join(self._r_tile_map[t] for t in self._solver.table))
