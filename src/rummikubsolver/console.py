@@ -24,7 +24,6 @@ def _c(t, prefix=None):
 
 
 class SolverConsole(Cmd):
-    prompt = "(rssolver) "
 
     def __init__(self, sg=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -37,6 +36,10 @@ class SolverConsole(Cmd):
     @property
     def solver(self):
         return self._games[self._current_game]
+
+    @property
+    def prompt(self):
+        return f"(rssolver) [{Style.BRIGHT}{self._current_game}{Style.RESET_ALL}] "
 
     def message(self, *msg):
         print(*msg, file=self.stdout)
