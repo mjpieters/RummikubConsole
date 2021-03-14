@@ -70,7 +70,7 @@ class RummikubSolver:
         if maximise == 'tiles':
             obj = cp.Maximize(cp.sum(y))
         elif maximise == 'value':
-            obj = cp.Maximize(cp.sum(v*y))
+            obj = cp.Maximize(cp.sum(v @ y))
         else:
             print('Invalid maximise function')
             return 0, np.zeros(len(j)), np.zeros(len(i)),
