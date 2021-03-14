@@ -52,6 +52,8 @@ class SolverConsole(Cmd):
             ", ".join([f"{ct}{c}" for c, ct in table_c_count.items()]),
         )
 
+    do_t = do_table
+
     def _parse_tiles(self, arg):
         args = arg.split()
         tiles = [self._tile_map[t] for t in args if t in self._tile_map]
