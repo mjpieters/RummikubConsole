@@ -1,12 +1,18 @@
+import shelve
 from cmd import Cmd
+from pathlib import Path
 from textwrap import dedent
 
+from appdirs import user_data_dir
 from colorama import init as colorama_init, Back, Fore, Style
 
 from .set_generator import SetGenerator
 from .solver import RummikubSolver
 
 
+APPNAME = "RummikubSolver"
+APPAUTHOR = "OllieHooper"
+SAVEPATH = Path(user_data_dir(APPNAME, APPAUTHOR))
 COLOURS = "k", "b", "o", "r"  # blacK, Blue, Orange and Red
 CMAP = {
     "k": Fore.BLACK + Back.WHITE,
@@ -24,14 +30,41 @@ def _c(t, prefix=None):
 
 
 class SolverConsole(Cmd):
+    _shelve = None
 
     def __init__(self, sg=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         colorama_init()
+        self._shelve_path = SAVEPATH / f"games_{sg.key}"
         self._tile_map, self._r_tile_map = create_number_maps(sg)
         self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
-        self._current_game = "default"
-        self._games = {self._current_game: self._new_game()}
+
+    @property
+    def _games(self):
+        if self._shelve is None:
+            self._shelve_path.parent.mkdir(parents=True, exist_ok=True)
+            self._shelve = shelve.open(str(self._shelve_path), writeback=True)
+
+        if not len(self._shelve):
+            self._shelve["__current_game__"] = "default"
+            self._shelve["default"] = self._new_game()
+
+        return self._shelve
+
+    @property
+    def _current_game(self):
+        if self._shelve is None:
+            self._games  # force opening of the shelve
+        return self._shelve["__current_game__"]
+
+    @_current_game.setter
+    def _current_game(self, name):
+        self._shelve["__current_game__"] = name
+
+    def postcmd(self, stop, line):
+        if self._shelve is not None:
+            self._shelve.close() if stop else self._shelve.sync()
+        return stop
 
     @property
     def solver(self):
@@ -82,7 +115,9 @@ class SolverConsole(Cmd):
     do_new = do_newgame
 
     def _complete_name(self, text, line, begidx, endidx):
-        return [name for name in self._games if name.startswith(text)]
+        return [
+            name for name in self._games if name[0] != "_" and name.startswith(text)
+        ]
 
     def do_delete(self, name):
         """delete [name]
@@ -137,7 +172,8 @@ class SolverConsole(Cmd):
         """
         self.message("Games:")
         for name in self._games:
-            self.message("-", name)
+            if name[0] != "_":
+                self.message("-", name)
 
     do_l = do_list
 
@@ -162,9 +198,7 @@ class SolverConsole(Cmd):
         Print the tiles on the table
         """
         self.message(", ".join(_c(self._r_tile_map[t]) for t in self.solver.table))
-        table_count, table_c_count = get_tile_count(
-            self.solver.table, self._r_tile_map
-        )
+        table_count, table_c_count = get_tile_count(self.solver.table, self._r_tile_map)
         self.message(
             table_count,
             "tiles on table:",

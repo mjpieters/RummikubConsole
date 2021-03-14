@@ -16,6 +16,10 @@ class SetGenerator:
         self.sets = set()
         self.generate_sets()
 
+    @property
+    def key(self):
+        return f"n{self.numbers}c{self.colours}j{self.jokers}m{self.min_len}"
+
     def generate_tiles(self):
         return list(range(1, self.numbers * self.colours + 1 + (1 if self.jokers else 0)))
 
