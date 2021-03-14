@@ -30,7 +30,13 @@ class SolverConsole(Cmd):
         super().__init__(*args, **kwargs)
         colorama_init()
         self._tile_map, self._r_tile_map = create_number_maps(sg)
-        self._solver = RummikubSolver(tiles=sg.tiles, sets=sg.sets)
+        self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
+        self._current_game = "default"
+        self._games = {self._current_game: self._new_game()}
+
+    @property
+    def solver(self):
+        return self._games[self._current_game]
 
     def message(self, *msg):
         print(*msg, file=self.stdout)
@@ -38,14 +44,108 @@ class SolverConsole(Cmd):
     def error(self, *msg):
         print("***", *msg, file=self.stdout)
 
+    def do_name(self, newname):
+        """name newname
+        Set a new name for the currently selected game
+        """
+        if not newname:
+            self.error("You must provide a new name for the current game")
+            return
+        oldname = self._current_game
+        self._games[newname] = self._games.pop(oldname)
+        self._current_game = newname
+        self.message(f"{oldname!r} has been renamed to {newname!r}")
+
+    def do_newgame(self, name):
+        """newgame [name] | new [name]
+        Create a new game with the given name and switch to it.
+        If no name was given, one will be generated.
+        """
+        if name in self._games:
+            self.error(f"Can't create a game named {name!r}, it already exists")
+            return
+        if not name:
+            count = len(self._games) + 1
+            while True:
+                name = f"game{count}"
+                if name not in self._games:
+                    break
+                count += 1
+
+        self._games[name] = self._new_game()
+        self._current_game = name
+        self.message(f"New game {name!r} is now the current game")
+
+    do_new = do_newgame
+
+    def _complete_name(self, text, line, begidx, endidx):
+        return [name for name in self._games if name.startswith(text)]
+
+    def do_delete(self, name):
+        """delete [name]
+        Remove the named game. If this is the current game or no name was given,
+        will select another game to switch to. If this is the last game, will
+        create a new game to switch to.
+        """
+        if not name:
+            name = self._current_game
+        if name not in self._games:
+            self.error(f"No game named {name!r} to delete")
+            return
+        switch_to = None
+        if name == self._current_game:
+            names = list(self._games)
+            if len(names) > 1:
+                idx = names.index(name) + 1
+                switch_to = names[idx % len(names)]
+            else:
+                switch_to = "default"
+        del self._games[name]
+        self.message(f"Deleted {name!r}")
+        if switch_to:
+            if switch_to not in self._games:
+                self._games[switch_to] = self._new_game()
+            self._current_game = switch_to
+            self.message(f"Current game is now {name!r}")
+
+    complete_delete = _complete_name
+
+    def do_switch(self, name):
+        """switch name | s name
+        Switch to the named game
+        """
+        if not name:
+            self.error("Required game name not provided")
+            return
+        if name not in self._games:
+            self.error(f"No game named {name!r}")
+            return
+        self._current_game = name
+        self.message(f"Current game set to {name!r}")
+        return
+
+    do_s = do_switch
+    complete_switch = _complete_name
+    complete_s = _complete_name
+
+    def do_list(self, arg):
+        """list | l
+        List names of all games
+        """
+        self.message("Games:")
+        for name in self._games:
+            self.message("-", name)
+
+    do_l = do_list
+
     def do_rack(self, arg):
         """rack | r
         Print the tiles on your rack
         """
         self.message(
-            ", ".join(_c(self._r_tile_map[t]) for t in self._solver.rack),
+            ", ".join(_c(self._r_tile_map[t]) for t in self.solver.rack),
         )
-        rack_count, rack_c_count = get_tile_count(self._solver.rack, self._r_tile_map)
+        rack_count, rack_c_count = get_tile_count(self.solver.rack, self._r_tile_map)
         self.message(
             rack_count,
             "tiles on rack:",
@@ -58,9 +158,9 @@ class SolverConsole(Cmd):
         """table | t
         Print the tiles on the table
         """
-        self.message(", ".join(_c(self._r_tile_map[t]) for t in self._solver.table))
+        self.message(", ".join(_c(self._r_tile_map[t]) for t in self.solver.table))
         table_count, table_c_count = get_tile_count(
-            self._solver.table, self._r_tile_map
+            self.solver.table, self._r_tile_map
         )
         self.message(
             table_count,
@@ -86,7 +186,7 @@ class SolverConsole(Cmd):
         """
         tiles = self._parse_tiles(arg)
         if tiles:
-            self._solver.add_rack(tiles)
+            self.solver.add_rack(tiles)
             self.message("Added tiles to your rack")
 
     do_ar = do_addrack
@@ -99,7 +199,7 @@ class SolverConsole(Cmd):
         """
         tiles = self._parse_tiles(arg)
         if tiles:
-            self._solver.remove_rack(tiles)
+            self.solver.remove_rack(tiles)
             self.message("Removed tiles from rack")
 
     do_rr = do_removerack
@@ -112,7 +212,7 @@ class SolverConsole(Cmd):
         """
         tiles = self._parse_tiles(arg)
         if tiles:
-            self._solver.add_table(tiles)
+            self.solver.add_table(tiles)
             self.message("Added tiles to the table")
 
     do_at = do_addtable
@@ -125,7 +225,7 @@ class SolverConsole(Cmd):
         """
         tiles = self._parse_tiles(arg)
         if tiles:
-            self._solver.remove_table(tiles)
+            self.solver.remove_table(tiles)
             self.message("Removed tiles from the table")
 
     do_rt = do_removetable
@@ -138,8 +238,8 @@ class SolverConsole(Cmd):
         """
         tiles = self._parse_tiles(arg)
         if tiles:
-            self._solver.remove_rack(tiles)
-            self._solver.add_table(tiles)
+            self.solver.remove_rack(tiles)
+            self.solver.add_table(tiles)
             self.message("Placed tiles from your rack onto the table")
 
     do_r2t = do_place
@@ -152,8 +252,8 @@ class SolverConsole(Cmd):
         """
         tiles = self._parse_tiles(arg)
         if tiles:
-            self._solver.remove_table(tiles)
-            self._solver.add_rack(tiles)
+            self.solver.remove_table(tiles)
+            self.solver.add_rack(tiles)
             self.message("Taken tiles from the table and placed on your rack")
 
     do_t2r = do_remove
@@ -183,7 +283,7 @@ class SolverConsole(Cmd):
         return [v for v in valid if v.startswith(text)]
 
     def print_solution(self, maximise="tiles", initial_meld=False):
-        solver = self._solver
+        solver = self.solver
         value, tiles, sets = solver.solve(maximise=maximise, initial_meld=initial_meld)
         if value < (30 if initial_meld else 1):
             self.message("No solution found - pick up a tile.")
