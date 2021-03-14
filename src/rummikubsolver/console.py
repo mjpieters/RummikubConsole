@@ -62,7 +62,7 @@ class SolverConsole(Cmd):
         return tiles
 
     def _complete_tiles(self, text, line, begidx, endidx):
-        return [t for t in self._r_tile_map if t.startswith(text)]
+        return [t for t in self._tile_map if t.startswith(text)]
 
     def do_addrack(self, arg):
         """addrack tile [tile ...] | ar tile [tile ...]
