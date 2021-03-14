@@ -174,7 +174,7 @@ class SolverConsole(Cmd):
             return
 
         tile_list = [solver.tiles[i] for i, t in enumerate(tiles) if t == 1]
-        set_list = [self._solver.sets[i] for i, s in enumerate(sets) if s == 1]
+        set_list = [solver.sets[i] for i, s in enumerate(sets) if s == 1]
         self.message("Using the following tiles from your rack:")
         self.message(", ".join([self._r_tile_map[t] for t in tile_list]))
         self.message("Make the following sets:")
