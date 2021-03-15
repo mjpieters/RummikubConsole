@@ -133,7 +133,7 @@ class SolverConsole(Cmd):
             return
         switch_to = None
         if name == self._current_game:
-            names = list(self._games)
+            names = [n for n in self._games if n[0] != "_"]
             if len(names) > 1:
                 idx = names.index(name) + 1
                 switch_to = names[idx % len(names)]
