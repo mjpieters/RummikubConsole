@@ -21,6 +21,7 @@ CMAP = {
     "r": Fore.RED,
     "j": Fore.WHITE,
 }
+CURRENT = "__current_game__"
 
 
 def _c(t, prefix=None):
@@ -46,7 +47,7 @@ class SolverConsole(Cmd):
             self._shelve = shelve.open(str(self._shelve_path), writeback=True)
 
         if not len(self._shelve):
-            self._shelve["__current_game__"] = "default"
+            self._shelve[CURRENT] = "default"
             self._shelve["default"] = self._new_game()
 
         return self._shelve
@@ -55,11 +56,11 @@ class SolverConsole(Cmd):
     def _current_game(self):
         if self._shelve is None:
             self._games  # force opening of the shelve
-        return self._shelve["__current_game__"]
+        return self._shelve[CURRENT]
 
     @_current_game.setter
     def _current_game(self, name):
-        self._shelve["__current_game__"] = name
+        self._shelve[CURRENT] = name
 
     def postcmd(self, stop, line):
         if self._shelve is not None:
