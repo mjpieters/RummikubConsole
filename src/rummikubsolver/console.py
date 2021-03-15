@@ -24,6 +24,15 @@ CMAP = {
 CURRENT = "__current_game__"
 
 
+def _fixed_completer(*options):
+    """Generate a completer for a fixed number of arguments"""
+
+    def completer(self, text, *_):
+        return [opt for opt in options if opt.startswith(text)]
+
+    return completer
+
+
 def _c(t, prefix=None):
     """Add ANSI colour codes to a tile"""
     prefix = prefix or t[0]
@@ -181,6 +190,29 @@ class SolverConsole(Cmd):
 
     do_l = do_list
 
+    def do_clear(self, arg):
+        """clear [table|rack]
+        Clear the rack and table, or just the table or rack if named explicitly.
+        """
+        if arg not in {"", "table", "rack"}:
+            self.error(
+                "Invalid argument for clear, expected 'table' or 'rack', got ${arg!r}"
+            )
+            return
+        confirm = console_qa(f"Clear {arg or 'the game'} [Y/n]", "", "y", "n")
+        if confirm not in {"", "y"}:
+            return
+
+        solver = self.solver
+        if arg in {"", "table"}:
+            # pass in a copy, to avoid modifying the same list in-place
+            solver.remove_table(list(solver.table))
+        if arg in {"", "rack"}:
+            # pass in a copy, to avoid modifying the same list in-place
+            solver.remove_rack(list(solver.rack))
+
+    complete_clear = _fixed_completer("table", "rack")
+
     def do_rack(self, arg):
         """rack | r
         Print the tiles on your rack
@@ -319,9 +351,7 @@ class SolverConsole(Cmd):
         maximise = "tiles" if arg == "tiles" else "value"
         self.print_solution(maximise=maximise, initial_meld=initial_meld)
 
-    def complete_solve(self, text, line, begidx, endidx):
-        valid = ["tiles", "value", "initial"]
-        return [v for v in valid if v.startswith(text)]
+    complete_solve = _fixed_completer("tiles", "value", "initial")
 
     def print_solution(self, maximise="tiles", initial_meld=False):
         solver = self.solver
