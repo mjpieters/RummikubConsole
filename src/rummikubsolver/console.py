@@ -145,7 +145,7 @@ class SolverConsole(Cmd):
             if switch_to not in self._games:
                 self._games[switch_to] = self._new_game()
             self._current_game = switch_to
-            self.message(f"Current game is now {name!r}")
+            self.message(f"Current game is now {switch_to!r}")
 
     complete_delete = _complete_name
 
