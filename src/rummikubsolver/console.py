@@ -407,8 +407,10 @@ class SolverConsole(Cmd):
             self.message("No solution found - pick up a tile.")
             return
 
-        tile_list = [solver.tiles[i] for i, t in enumerate(tiles) if t == 1]
-        set_list = [solver.sets[i] for i, s in enumerate(sets) if s == 1]
+        tile_list = [
+            solver.tiles[i] for i, t in enumerate(tiles) for _ in range(int(t))
+        ]
+        set_list = [solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))]
         self.message("Using the following tiles from your rack:")
         self.message(
             click.wrap_text(
