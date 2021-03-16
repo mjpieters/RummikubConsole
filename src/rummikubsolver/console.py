@@ -41,7 +41,7 @@ class TileSource(Enum):
 
         def completer(console, text, line, begidx, endidx):
             """Complete tile names, but only those that are still available to place"""
-            _, *args = line[:begidx].split()
+            _, *args = (line[:begidx] + line[endidx:]).split()
             avail = self.available(console) - Counter(map(console._tile_map.get, args))
             rmap = console._r_tile_map
             return [
@@ -215,6 +215,12 @@ class SolverConsole(Cmd):
         # can't tell the completer to switch matching modes at this point of the
         # completion flow). We have already collapsed whitespace in names to
         # single spaces to simplify this process.
+
+        if line[endidx:].strip():
+            # ignore the case where someone went back on the line and hit tab
+            # in the middle. Not worth worrying about.
+            return []
+
         _, *pref = line[:begidx].split()
         plen = len(pref)
         nparts = (n.split() for n in self._games if n[0] != "_")
