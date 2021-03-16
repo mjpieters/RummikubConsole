@@ -49,6 +49,26 @@ class SolverConsole(Cmd):
         self._tile_map, self._r_tile_map = create_number_maps(sg)
         self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
 
+    # adjust the completer to only split on whitespace; the default contains
+    # a range of shell punctuation this console never needs to split on and would
+    # otherwise place undue restrictions on game names.
+    def preloop(self):
+        try:
+            import readline
+
+            self._old_delims = readline.get_completer_delims()
+            readline.set_completer_delims(" \t\n")
+        except ImportError:
+            pass
+
+    def postloop(self):
+        try:
+            import readline
+
+            readline.set_completer_delims(self._old_delims)
+        except ImportError:
+            pass
+
     @property
     def _games(self):
         if self._shelve is None:
@@ -97,6 +117,9 @@ class SolverConsole(Cmd):
         if not newname:
             self.error("You must provide a new name for the current game")
             return
+        # collapse whitespace to single spaces; this makes readline name completion
+        # vastly simpler.
+        newname = " ".join(newname.split())
         oldname = self._current_game
         self._games[newname] = self._games.pop(oldname)
         self._current_game = newname
@@ -125,8 +148,19 @@ class SolverConsole(Cmd):
     do_new = do_newgame
 
     def _complete_name(self, text, line, begidx, endidx):
+        # names can contain spaces, so match the whole line after the command
+        # Completions should only list the *remainder* after any complete words
+        # already entered, as the completer sees spaces as delimiters (and we
+        # can't tell the completer to switch matching modes at this point of the
+        # completion flow). We have already collapsed whitespace in names to
+        # single spaces to simplify this process.
+        _, *pref = line[:begidx].split()
+        plen = len(pref)
+        nparts = (n.split() for n in self._games if n[0] != "_")
         return [
-            name for name in self._games if name[0] != "_" and name.startswith(text)
+            " ".join(np[plen:])
+            for np in nparts
+            if len(np) > plen and np[:plen] == pref and np[plen].startswith(text)
         ]
 
     def do_delete(self, name):
