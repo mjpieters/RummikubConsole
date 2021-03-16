@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import shelve
 from cmd import Cmd
 from enum import Enum
@@ -25,6 +27,7 @@ APPNAME = "RummikubSolver"
 APPAUTHOR = "OllieHooper"
 SAVEPATH = Path(user_data_dir(APPNAME, APPAUTHOR))
 COLOURS = "k", "b", "o", "r"  # blacK, Blue, Orange and Red
+JOKER = "j"
 CMAP = {
     "k": {"fg": "black", "bg": "white"},
     "b": {"fg": "cyan"},
@@ -33,6 +36,7 @@ CMAP = {
     "j": {"fg": "white"},
 }
 CURRENT = "__current_game__"
+DEFAULT_NAME = "default"
 
 
 class TileSource(Enum):
@@ -57,7 +61,7 @@ class TileSource(Enum):
 
         return completer
 
-    def available(self, console):
+    def available(self, console) -> Counter[str]:
         solver = console.solver
         if self is TileSource.RACK:
             return Counter(solver.rack)
@@ -68,11 +72,11 @@ class TileSource(Enum):
         repeats, jokers = sg.repeats, sg.jokers
         counts = Counter({t: repeats for t in sg.tiles})
         if jokers and jokers != repeats:
-            counts[console._tile_map["j"]] = jokers
+            counts[console._tile_map[JOKER]] = jokers
         counts -= Counter(chain(solver.table, solver.rack))
         return counts
 
-    def parse_tiles(self, console, arg):
+    def parse_tiles(self, console, arg) -> list[int]:
         avail = self.available(console)
         tiles = []
         for tile in arg.split():
@@ -81,7 +85,7 @@ class TileSource(Enum):
                 console.error("Ignoring invalid tile:", tile)
                 continue
             if not avail[t]:
-                if tile == "j":
+                if tile == JOKER:
                     console.error("Too many jokers in the game, can't add more.")
                 else:
                     self.error(f"Too many repeats for {tile}, can't add more.")
@@ -94,7 +98,7 @@ class TileSource(Enum):
 def _fixed_completer(*options, case_insensitive=False):
     """Generate a completer for a fixed number of arguments"""
 
-    def completer(self, text, *_):
+    def completer(self, text, *_) -> list[str]:
         if case_insensitive:
             text = text.lower()
         return [opt for opt in options if opt.startswith(text)]
@@ -102,7 +106,7 @@ def _fixed_completer(*options, case_insensitive=False):
     return completer
 
 
-def _c(t, prefix=None):
+def _c(t, prefix=None) -> str:
     """Add ANSI colour codes to a tile"""
     prefix = prefix or t[0]
     return click.style(t, **CMAP[prefix])
@@ -112,7 +116,7 @@ class SolverConsole(Cmd):
     _shelve = None
     intro = "Welcome to the Rummikub Solver console\n"
 
-    def __init__(self, sg=None, *args, **kwargs):
+    def __init__(self, sg=None, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._shelve_path = SAVEPATH / f"games_{sg.key}"
         self._tile_map, self._r_tile_map = create_number_maps(sg)
@@ -126,7 +130,7 @@ class SolverConsole(Cmd):
             "n", "no", "y", "yes", case_insensitive=True
         )
 
-        def confirm(self, text, default=False):
+        def confirm(self, text, default=False) -> bool:
             """Confirm some action, with appropriate readline handling"""
             before = readline.get_current_history_length()
             # the completenames function is used to complete command names when
@@ -145,7 +149,7 @@ class SolverConsole(Cmd):
         # adjust the completer to only split on whitespace; the default contains
         # a range of shell punctuation this console never needs to split on and would
         # otherwise place undue restrictions on game names.
-        def preloop(self):
+        def preloop(self) -> None:
             try:
                 import readline
 
@@ -154,7 +158,7 @@ class SolverConsole(Cmd):
             except ImportError:
                 pass
 
-        def postloop(self):
+        def postloop(self) -> None:
             try:
                 import readline
 
@@ -169,41 +173,41 @@ class SolverConsole(Cmd):
             self._shelve = shelve.open(str(self._shelve_path), writeback=True)
 
         if not len(self._shelve):
-            self._shelve[CURRENT] = "default"
-            self._shelve["default"] = self._new_game()
+            self._shelve[CURRENT] = DEFAULT_NAME
+            self._shelve[DEFAULT_NAME] = self._new_game()
 
         return self._shelve
 
     @property
-    def _current_game(self):
+    def _current_game(self) -> str:
         if self._shelve is None:
             self._games  # force opening of the shelve
         return self._shelve[CURRENT]
 
     @_current_game.setter
-    def _current_game(self, name):
+    def _current_game(self, name: str) -> None:
         self._shelve[CURRENT] = name
 
-    def postcmd(self, stop, line):
+    def postcmd(self, stop: bool, line: str) -> bool:
         if self._shelve is not None:
             self._shelve.close() if stop else self._shelve.sync()
         return stop
 
     @property
-    def solver(self):
+    def solver(self) -> RummikubSolver:
         return self._games[self._current_game]
 
     @property
-    def prompt(self):
+    def prompt(self) -> str:
         return f"(rssolver) [{click.style(self._current_game, fg='bright_white')}] "
 
-    def message(self, *msg):
+    def message(self, *msg: object) -> None:
         click.echo(" ".join(map(str, msg)), file=self.stdout)
 
-    def error(self, *msg):
+    def error(self, *msg: object) -> None:
         click.echo(" ".join(["***", *map(str, msg)]), file=self.stdout)
 
-    def do_name(self, newname):
+    def do_name(self, newname: str) -> None:
         """name newname
         Set a new name for the currently selected game
         """
@@ -218,7 +222,7 @@ class SolverConsole(Cmd):
         self._current_game = newname
         self.message(f"{oldname!r} has been renamed to {newname!r}")
 
-    def do_newgame(self, name):
+    def do_newgame(self, name: str) -> None:
         """newgame [name] | new [name]
         Create a new game with the given name and switch to it.
         If no name was given, one will be generated.
@@ -240,7 +244,9 @@ class SolverConsole(Cmd):
 
     do_new = do_newgame
 
-    def _complete_name(self, text, line, begidx, endidx):
+    def _complete_name(
+        self, text: str, line: str, begidx: int, endidx: int
+    ) -> list[str]:
         # names can contain spaces, so match the whole line after the command
         # Completions should only list the *remainder* after any complete words
         # already entered, as the completer sees spaces as delimiters (and we
@@ -262,7 +268,7 @@ class SolverConsole(Cmd):
             if len(np) > plen and np[:plen] == pref and np[plen].startswith(text)
         ]
 
-    def do_delete(self, name):
+    def do_delete(self, name: str) -> None:
         """delete [name]
         Remove the named game. If this is the current game or no name was given,
         will select another game to switch to. If this is the last game, will
@@ -282,7 +288,7 @@ class SolverConsole(Cmd):
                 idx = names.index(name) + 1
                 switch_to = names[idx % len(names)]
             else:
-                switch_to = "default"
+                switch_to = DEFAULT_NAME
         del self._games[name]
         self.message(f"Deleted {name!r}")
         if switch_to:
@@ -293,7 +299,7 @@ class SolverConsole(Cmd):
 
     complete_delete = _complete_name
 
-    def do_switch(self, name):
+    def do_switch(self, name: str) -> None:
         """switch name | s name
         Switch to the named game
         """
@@ -311,7 +317,7 @@ class SolverConsole(Cmd):
     complete_switch = _complete_name
     complete_s = _complete_name
 
-    def do_list(self, arg):
+    def do_list(self, arg: str) -> None:
         """list | l
         List names of all games
         """
@@ -322,13 +328,13 @@ class SolverConsole(Cmd):
 
     do_l = do_list
 
-    def do_clear(self, arg):
+    def do_clear(self, arg: str) -> None:
         """clear [table|rack]
         Clear the rack and table, or just the table or rack if named explicitly.
         """
         if arg not in {"", "table", "rack"}:
             self.error(
-                "Invalid argument for clear, expected 'table' or 'rack', got ${arg!r}"
+                "Invalid argument for clear, expected 'table' or 'rack', got {arg!r}"
             )
             return
         if not self.confirm(f"Clear {arg or 'the game'}?"):
@@ -344,7 +350,7 @@ class SolverConsole(Cmd):
 
     complete_clear = _fixed_completer("table", "rack")
 
-    def do_rack(self, arg):
+    def do_rack(self, arg: str) -> None:
         """rack | r
         Print the tiles on your rack
         """
@@ -366,7 +372,7 @@ class SolverConsole(Cmd):
 
     do_r = do_rack
 
-    def do_table(self, arg):
+    def do_table(self, arg: str) -> None:
         """table | t
         Print the tiles on the table
         """
@@ -388,7 +394,7 @@ class SolverConsole(Cmd):
 
     do_t = do_table
 
-    def do_addrack(self, arg):
+    def do_addrack(self, arg: str) -> None:
         """addrack tile [tile ...] | ar tile [tile ...]
         Add tile(s) to your rack
         """
@@ -401,7 +407,7 @@ class SolverConsole(Cmd):
     complete_addrack = TileSource.NOT_PLAYED.tile_completer
     complete_ar = TileSource.NOT_PLAYED.tile_completer
 
-    def do_removerack(self, arg):
+    def do_removerack(self, arg: str) -> None:
         """removerack tile [tile ...] | rr tile [tile ...]
         Remove tile(s) from your rack
         """
@@ -414,7 +420,7 @@ class SolverConsole(Cmd):
     complete_removerack = TileSource.RACK.tile_completer
     complete_rr = TileSource.RACK.tile_completer
 
-    def do_addtable(self, arg):
+    def do_addtable(self, arg: str) -> None:
         """addtable tile [tile ...] | at tile [tile ...]
         Add tiles to the table
         """
@@ -427,7 +433,7 @@ class SolverConsole(Cmd):
     complete_addtable = TileSource.NOT_PLAYED.tile_completer
     complete_at = TileSource.NOT_PLAYED.tile_completer
 
-    def do_removetable(self, arg):
+    def do_removetable(self, arg: str) -> None:
         """removetable tile [tile ...] | rt tile [tile ...]
         Remove tile(s) from the table
         """
@@ -440,7 +446,7 @@ class SolverConsole(Cmd):
     complete_removetable = TileSource.TABLE.tile_completer
     complete_rt = TileSource.TABLE.tile_completer
 
-    def do_place(self, arg):
+    def do_place(self, arg: str) -> None:
         """place tile [tile ...] | r2t tile [tile ...]
         Place tiles from your rack onto the table
         """
@@ -454,7 +460,7 @@ class SolverConsole(Cmd):
     complete_place = TileSource.RACK.tile_completer
     complete_r2t = TileSource.RACK.tile_completer
 
-    def do_remove(self, arg):
+    def do_remove(self, arg: str) -> None:
         """remove tile [tile ...] | t2r tile [tile ...]
         Take tiles from the table onto your rack
         """
@@ -468,7 +474,7 @@ class SolverConsole(Cmd):
     complete_t2r = TileSource.TABLE.tile_completer
     complete_remove = TileSource.TABLE.tile_completer
 
-    def do_solve(self, arg):
+    def do_solve(self, arg: str) -> None:
         """solve [tiles | value | initial]
         Attempt to place tiles.
 
@@ -488,7 +494,9 @@ class SolverConsole(Cmd):
 
     complete_solve = _fixed_completer("tiles", "value", "initial")
 
-    def print_solution(self, maximise="tiles", initial_meld=False):
+    def print_solution(
+        self, maximise: str = "tiles", initial_meld: bool = False
+    ) -> None:
         solver = self.solver
         value, tiles, sets = solver.solve(maximise=maximise, initial_meld=initial_meld)
         tile_list = [
@@ -496,9 +504,9 @@ class SolverConsole(Cmd):
         ]
         set_list = [solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))]
 
-        if self._sg.jokers and self._tile_map["j"] in tile_list:
+        if self._sg.jokers and self._tile_map[JOKER] in tile_list:
             # at least one joker in the set; its replacement value is not included
-            j = self._tile_map["j"]
+            j = self._tile_map[JOKER]
             n = self._sg.numbers
             for set in set_list:
                 if j not in set:
@@ -542,7 +550,7 @@ class SolverConsole(Cmd):
             solver.add_table(tile_list)
             self.message("Placed tiles on table")
 
-    def do_stop(self, arg):
+    def do_stop(self, arg: str) -> None:
         """stop | end | quit
         Exit from the console
         """
@@ -553,7 +561,7 @@ class SolverConsole(Cmd):
     do_quit = do_stop
     do_EOF = do_stop
 
-    def help_tiles(self):
+    def help_tiles(self) -> None:
         self.message(
             dedent(
                 """
@@ -576,11 +584,11 @@ class SolverConsole(Cmd):
         )
 
 
-def create_number_maps(sg):
+def create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]]:
     verbose_list = [
         f"{COLOURS[c]}{n}" for c in range(sg.colours) for n in range(1, sg.numbers + 1)
     ]
-    verbose_list.append("j")
+    verbose_list.append(JOKER)
     tile_map = dict(zip(verbose_list, sg.tiles))
     r_tile_map = {v: k for k, v in tile_map.items()}
     return tile_map, r_tile_map
