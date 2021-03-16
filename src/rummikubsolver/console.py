@@ -590,7 +590,8 @@ def create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]
     verbose_list = [
         f"{COLOURS[c]}{n}" for c in range(sg.colours) for n in range(1, sg.numbers + 1)
     ]
-    verbose_list.append(JOKER)
+    if sg.jokers:
+        verbose_list.append(JOKER)
     tile_map = dict(zip(verbose_list, sg.tiles))
     r_tile_map = {v: k for k, v in tile_map.items()}
     return tile_map, r_tile_map
