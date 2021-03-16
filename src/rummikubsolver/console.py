@@ -49,6 +49,7 @@ class SolverConsole(Cmd):
         self._shelve_path = SAVEPATH / f"games_{sg.key}"
         self._tile_map, self._r_tile_map = create_number_maps(sg)
         self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
+        self._sg = sg
 
     # adjust the completer to only split on whitespace; the default contains
     # a range of shell punctuation this console never needs to split on and would
@@ -403,14 +404,37 @@ class SolverConsole(Cmd):
     def print_solution(self, maximise="tiles", initial_meld=False):
         solver = self.solver
         value, tiles, sets = solver.solve(maximise=maximise, initial_meld=initial_meld)
-        if value < (30 if initial_meld else 1):
-            self.message("No solution found - pick up a tile.")
-            return
-
         tile_list = [
             solver.tiles[i] for i, t in enumerate(tiles) for _ in range(int(t))
         ]
         set_list = [solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))]
+
+        if self._sg.jokers and self._tile_map["j"] in tile_list:
+            # at least one joker in the set; its replacement value is not included
+            j = self._tile_map["j"]
+            n = self._sg.numbers
+            for set in set_list:
+                if j not in set:
+                    continue
+                values = [((t - 1) % n) + 1 for t in set if t != j]
+                if all(v == values[0] for v in values):
+                    # same value, different colours. The joker has the same colour
+                    value += values[0]
+                else:
+                    # tiles of the same colour, ranked, find missing tile or
+                    # use max + 1 (unless that falls outside the number range,
+                    # then use n - 2)
+                    missing = values[-1] + 1 if values[-1] != n else n - 2
+                    for expected, actual in enumerate(values, start=values[0]):
+                        if expected != actual:
+                            missing = expected
+                            break
+                    value += missing
+
+        if value < (30 if initial_meld else 1):
+            self.message("No solution found - pick up a tile.")
+            return
+
         self.message("Using the following tiles from your rack:")
         self.message(
             click.wrap_text(
