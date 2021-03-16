@@ -3,9 +3,10 @@ from cmd import Cmd
 from pathlib import Path
 from textwrap import dedent
 
+import click
 from appdirs import user_data_dir
-from colorama import init as colorama_init, Back, Fore, Style
 
+from . import __version__
 from .set_generator import SetGenerator
 from .solver import RummikubSolver
 
@@ -15,11 +16,11 @@ APPAUTHOR = "OllieHooper"
 SAVEPATH = Path(user_data_dir(APPNAME, APPAUTHOR))
 COLOURS = "k", "b", "o", "r"  # blacK, Blue, Orange and Red
 CMAP = {
-    "k": Fore.BLACK + Back.WHITE,
-    "b": Fore.CYAN,
-    "o": Fore.YELLOW,
-    "r": Fore.RED,
-    "j": Fore.WHITE,
+    "k": {"fg": "black", "bg": "white"},
+    "b": {"fg": "cyan"},
+    "o": {"fg": "yellow"},
+    "r": {"fg": "red"},
+    "j": {"fg": "white"},
 }
 CURRENT = "__current_game__"
 
@@ -36,15 +37,15 @@ def _fixed_completer(*options):
 def _c(t, prefix=None):
     """Add ANSI colour codes to a tile"""
     prefix = prefix or t[0]
-    return f"{Style.BRIGHT}{CMAP[prefix]}{t}{Style.RESET_ALL}"
+    return click.style(t, **CMAP[prefix])
 
 
 class SolverConsole(Cmd):
     _shelve = None
+    intro = "Welcome to the Rummikub Solver console\n"
 
     def __init__(self, sg=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        colorama_init()
         self._shelve_path = SAVEPATH / f"games_{sg.key}"
         self._tile_map, self._r_tile_map = create_number_maps(sg)
         self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
@@ -102,13 +103,13 @@ class SolverConsole(Cmd):
 
     @property
     def prompt(self):
-        return f"(rssolver) [{Style.BRIGHT}{self._current_game}{Style.RESET_ALL}] "
+        return f"(rssolver) [{click.style(self._current_game, fg='bright_white')}] "
 
     def message(self, *msg):
-        print(*msg, file=self.stdout)
+        click.echo(" ".join(msg), file=self.stdout)
 
     def error(self, *msg):
-        print("***", *msg, file=self.stdout)
+        click.echo(" ".join(["***", *msg]), file=self.stdout)
 
     def do_name(self, newname):
         """name newname
@@ -174,8 +175,7 @@ class SolverConsole(Cmd):
         if name not in self._games:
             self.error(f"No game named {name!r} to delete")
             return
-        confirm = console_qa(f"Delete game {name} [Y/n]", "", "y", "n")
-        if confirm not in {"", "y"}:
+        if not click.confirm(f"Delete game {name}?"):
             return
         switch_to = None
         if name == self._current_game:
@@ -233,8 +233,7 @@ class SolverConsole(Cmd):
                 "Invalid argument for clear, expected 'table' or 'rack', got ${arg!r}"
             )
             return
-        confirm = console_qa(f"Clear {arg or 'the game'} [Y/n]", "", "y", "n")
-        if confirm not in {"", "y"}:
+        if not click.confirm(f"Clear {arg or 'the game'}?"):
             return
 
         solver = self.solver
@@ -402,10 +401,9 @@ class SolverConsole(Cmd):
         for s in set_list:
             self.message(", ".join([_c(self._r_tile_map[t]) for t in s]))
 
-        auto_add_remove = console_qa(
-            "Automatically place tiles for selected solution? [Y/n]", "", "y", "n"
-        )
-        if auto_add_remove in {"", "y"}:
+        if click.confirm(
+            "Automatically place tiles for selected solution?", default=True
+        ):
             solver.remove_rack(tile_list)
             solver.add_table(tile_list)
             self.message("Placed tiles on table")
@@ -444,16 +442,6 @@ class SolverConsole(Cmd):
         )
 
 
-def console_qa(q, *conditions):
-    conditions = {str(c) for c in conditions}
-    while True:
-        inp = input(f"{q} ").lower()
-        if inp not in conditions:
-            print("Invalid input")
-        else:
-            return inp
-
-
 def create_number_maps(sg):
     verbose_list = [
         f"{COLOURS[c]}{n}" for c in range(sg.colours) for n in range(1, sg.numbers + 1)
@@ -471,24 +459,50 @@ def get_tile_count(tiles, r_tile_map):
     return len(tiles_list), colour_count
 
 
-def main():
-    default_rummikub = console_qa("Default rummikub rules? [Y/n]", "", "y", "n")
-    if default_rummikub in {"", "y"}:
-        sg = SetGenerator()
-    else:
-        numbers = int(console_qa("Numbers? [1-26]", *range(1, 27)))
-        colours = int(console_qa("Colours? [1-8]", *range(1, 9)))
-        jokers = int(console_qa("Jokers? [0-4]", *range(1, 5)))
-        min_len = int(console_qa("Minimum set length? [2-6]", *range(2, 7)))
-        sg = SetGenerator(
-            numbers=numbers, colours=colours, jokers=jokers, min_len=min_len
-        )
-
-    print("Running...")
-
-    cmd = SolverConsole(sg)
+@click.command(help="Rummikub Solver console")
+@click.option(
+    "--numbers",
+    default=13,
+    show_default=True,
+    type=click.IntRange(1, 26),
+    help="Number of tiles per colour (1 - 26)",
+    metavar="T",
+)
+@click.option(
+    "--colours",
+    default=4,
+    show_default=True,
+    type=click.IntRange(1, 8),
+    help="Number of colours for the tilesets (1 - 8)",
+    metavar="C",
+)
+@click.option(
+    "--jokers",
+    default=2,
+    show_default=True,
+    type=click.IntRange(0, 4),
+    help="Number of jokers in the game (0 - 4)",
+    metavar="J",
+)
+@click.option(
+    "--min-len",
+    default=3,
+    show_default=True,
+    type=click.IntRange(2, 6),
+    help="Mininum number of tiles in a set (2 - 6)",
+    metavar="M",
+)
+@click.version_option(__version__)
+def rcconsole(numbers=13, colours=4, jokers=2, min_len=3):
+    sg = SetGenerator(numbers=numbers, colours=colours, jokers=jokers, min_len=min_len)
+    cmd = SolverConsole(
+        sg,
+        # be tolerant of input character errors, don't break the console
+        stdin=click.get_text_stream("stdin", errors="replace"),
+        stdout=click.get_text_stream("stdout"),
+    )
     cmd.cmdloop()
 
 
 if __name__ == "__main__":
-    main()
+    rcconsole()
