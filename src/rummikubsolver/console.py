@@ -106,10 +106,10 @@ class SolverConsole(Cmd):
         return f"(rssolver) [{click.style(self._current_game, fg='bright_white')}] "
 
     def message(self, *msg):
-        click.echo(" ".join(msg), file=self.stdout)
+        click.echo(" ".join(map(str, msg)), file=self.stdout)
 
     def error(self, *msg):
-        click.echo(" ".join(["***", *msg]), file=self.stdout)
+        click.echo(" ".join(["***", *map(str, msg)]), file=self.stdout)
 
     def do_name(self, newname):
         """name newname
@@ -251,7 +251,13 @@ class SolverConsole(Cmd):
         Print the tiles on your rack
         """
         self.message(
-            ", ".join(_c(self._r_tile_map[t]) for t in self.solver.rack),
+            "Your rack:\n"
+            + click.wrap_text(
+                ", ".join(_c(self._r_tile_map[t]) for t in self.solver.rack),
+                initial_indent="  ",
+                subsequent_indent="  ",
+                width=click.get_terminal_size()[0],
+            ),
         )
         rack_count, rack_c_count = get_tile_count(self.solver.rack, self._r_tile_map)
         self.message(
@@ -266,7 +272,15 @@ class SolverConsole(Cmd):
         """table | t
         Print the tiles on the table
         """
-        self.message(", ".join(_c(self._r_tile_map[t]) for t in self.solver.table))
+        self.message(
+            "On the table:\n"
+            + click.wrap_text(
+                ", ".join(_c(self._r_tile_map[t]) for t in self.solver.table),
+                initial_indent="  ",
+                subsequent_indent="  ",
+                width=click.get_terminal_size()[0],
+            ),
+        )
         table_count, table_c_count = get_tile_count(self.solver.table, self._r_tile_map)
         self.message(
             table_count,
