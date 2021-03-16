@@ -174,7 +174,7 @@ class SolverConsole(Cmd):
         if name not in self._games:
             self.error(f"No game named {name!r} to delete")
             return
-        confirm = console_qa(f"Delete game ${name} [Y/n]", "", "y", "n")
+        confirm = console_qa(f"Delete game {name} [Y/n]", "", "y", "n")
         if confirm not in {"", "y"}:
             return
         switch_to = None
