@@ -4,9 +4,9 @@ from itertools import combinations
 
 
 class SetGenerator:
-
-    def __init__(self, numbers=13, colours=4, jokers=2, min_len=3):
+    def __init__(self, numbers=13, repeats=2, colours=4, jokers=2, min_len=3):
         self.numbers = numbers
+        self.repeats = repeats
         self.colours = colours
         self.jokers = jokers
         self.min_len = min_len
@@ -18,7 +18,11 @@ class SetGenerator:
 
     @property
     def key(self):
-        return f"n{self.numbers}c{self.colours}j{self.jokers}m{self.min_len}"
+        keys = zip(
+            "nrcjm",
+            (self.numbers, self.repeats, self.colours, self.jokers, self.min_len),
+        )
+        return "".join([f"{k}{v}" for k, v in keys])
 
     def generate_tiles(self):
         return list(range(1, self.numbers * self.colours + 1 + (1 if self.jokers else 0)))

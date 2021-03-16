@@ -1,5 +1,8 @@
 import shelve
 from cmd import Cmd
+from enum import Enum
+from collections import Counter
+from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 
@@ -23,6 +26,62 @@ CMAP = {
     "j": {"fg": "white"},
 }
 CURRENT = "__current_game__"
+
+
+class TileSource(Enum):
+    """Where to check for available tiles"""
+
+    NOT_PLAYED = 0  # tiles not on the table or on your rack
+    RACK = 1
+    TABLE = 2
+
+    @property
+    def tile_completer(self):
+        """Create a completer for a given tile source"""
+
+        def completer(console, text, line, begidx, endidx):
+            """Complete tile names, but only those that are still available to place"""
+            _, *args = line[:begidx].split()
+            avail = self.available(console) - Counter(map(console._tile_map.get, args))
+            rmap = console._r_tile_map
+            return [
+                n for t, c in avail.items() if c and (n := rmap[t]).startswith(text)
+            ]
+
+        return completer
+
+    def available(self, console):
+        solver = console.solver
+        if self is TileSource.RACK:
+            return Counter(solver.rack)
+        elif self is TileSource.TABLE:
+            return Counter(solver.table)
+        # NOT_PLAYED
+        sg = console._sg
+        repeats, jokers = sg.repeats, sg.jokers
+        counts = Counter({t: repeats for t in sg.tiles})
+        if jokers and jokers != repeats:
+            counts[console._tile_map["j"]] = jokers
+        counts -= Counter(chain(solver.table, solver.rack))
+        return counts
+
+    def parse_tiles(self, console, arg):
+        avail = self.available(console)
+        tiles = []
+        for tile in arg.split():
+            t = console._tile_map.get(tile)
+            if t is None:
+                console.error("Ignoring invalid tile:", tile)
+                continue
+            if not avail[t]:
+                if tile == "j":
+                    console.error("Too many jokers in the game, can't add more.")
+                else:
+                    self.error(f"Too many repeats for {tile}, can't add more.")
+                continue
+            avail[t] -= 1
+            tiles.append(t)
+        return tiles
 
 
 def _fixed_completer(*options):
@@ -291,95 +350,85 @@ class SolverConsole(Cmd):
 
     do_t = do_table
 
-    def _parse_tiles(self, arg):
-        args = arg.split()
-        tiles = [self._tile_map[t] for t in args if t in self._tile_map]
-        for invalid in set(args) - self._tile_map.keys():
-            self.error("Not a valid tile:", invalid)
-        return tiles
-
-    def _complete_tiles(self, text, line, begidx, endidx):
-        return [t for t in self._tile_map if t.startswith(text)]
-
     def do_addrack(self, arg):
         """addrack tile [tile ...] | ar tile [tile ...]
         Add tile(s) to your rack
         """
-        tiles = self._parse_tiles(arg)
+        tiles = TileSource.NOT_PLAYED.parse_tiles(self, arg)
         if tiles:
             self.solver.add_rack(tiles)
             self.message("Added tiles to your rack")
 
     do_ar = do_addrack
-    complete_addrack = _complete_tiles
-    complete_ar = _complete_tiles
+    complete_addrack = TileSource.NOT_PLAYED.tile_completer
+    complete_ar = TileSource.NOT_PLAYED.tile_completer
 
     def do_removerack(self, arg):
         """removerack tile [tile ...] | rr tile [tile ...]
         Remove tile(s) from your rack
         """
-        tiles = self._parse_tiles(arg)
+        tiles = TileSource.RACK.parse_tiles(self, arg)
         if tiles:
             self.solver.remove_rack(tiles)
             self.message("Removed tiles from rack")
 
     do_rr = do_removerack
-    complete_removerack = _complete_tiles
-    complete_rr = _complete_tiles
+    complete_removerack = TileSource.RACK.tile_completer
+    complete_rr = TileSource.RACK.tile_completer
 
     def do_addtable(self, arg):
         """addtable tile [tile ...] | at tile [tile ...]
         Add tiles to the table
         """
-        tiles = self._parse_tiles(arg)
+        tiles = TileSource.NOT_PLAYED.parse_tiles(self, arg)
         if tiles:
             self.solver.add_table(tiles)
             self.message("Added tiles to the table")
 
     do_at = do_addtable
-    complete_addtable = _complete_tiles
-    complete_at = _complete_tiles
+    complete_addtable = TileSource.NOT_PLAYED.tile_completer
+    complete_at = TileSource.NOT_PLAYED.tile_completer
 
     def do_removetable(self, arg):
         """removetable tile [tile ...] | rt tile [tile ...]
         Remove tile(s) from the table
         """
-        tiles = self._parse_tiles(arg)
+        tiles = TileSource.TABLE.parse_tiles(self, arg)
         if tiles:
             self.solver.remove_table(tiles)
             self.message("Removed tiles from the table")
 
     do_rt = do_removetable
-    complete_removetable = _complete_tiles
-    complete_rt = _complete_tiles
+    complete_removetable = TileSource.TABLE.tile_completer
+    complete_rt = TileSource.TABLE.tile_completer
 
     def do_place(self, arg):
         """place tile [tile ...] | r2t tile [tile ...]
         Place tiles from your rack onto the table
         """
-        tiles = self._parse_tiles(arg)
+        tiles = TileSource.RACK.parse_tiles(self, arg)
         if tiles:
             self.solver.remove_rack(tiles)
             self.solver.add_table(tiles)
             self.message("Placed tiles from your rack onto the table")
 
     do_r2t = do_place
-    complete_place = _complete_tiles
-    complete_r2t = _complete_tiles
+    complete_place = TileSource.RACK.tile_completer
+    complete_r2t = TileSource.RACK.tile_completer
 
     def do_remove(self, arg):
         """remove tile [tile ...] | t2r tile [tile ...]
         Take tiles from the table onto your rack
         """
-        tiles = self._parse_tiles(arg)
+        tiles = TileSource.TABLE.parse_tiles(self, arg)
         if tiles:
             self.solver.remove_table(tiles)
             self.solver.add_rack(tiles)
             self.message("Taken tiles from the table and placed on your rack")
 
     do_t2r = do_remove
-    complete_t2r = _complete_tiles
-    complete_remove = _complete_tiles
+    complete_t2r = TileSource.TABLE.tile_completer
+    complete_remove = TileSource.TABLE.tile_completer
 
     def do_solve(self, arg):
         """solve [tiles | value | initial]
@@ -516,6 +565,14 @@ def get_tile_count(tiles, r_tile_map):
     metavar="T",
 )
 @click.option(
+    "--repeats",
+    default=2,
+    show_default=True,
+    type=click.IntRange(1, 4),
+    help="Number of repeats per number per colour (1 - 4)",
+    metavar="R",
+)
+@click.option(
     "--colours",
     default=4,
     show_default=True,
@@ -540,8 +597,14 @@ def get_tile_count(tiles, r_tile_map):
     metavar="M",
 )
 @click.version_option(__version__)
-def rcconsole(numbers=13, colours=4, jokers=2, min_len=3):
-    sg = SetGenerator(numbers=numbers, colours=colours, jokers=jokers, min_len=min_len)
+def rcconsole(numbers=13, repeats=2, colours=4, jokers=2, min_len=3):
+    sg = SetGenerator(
+        numbers=numbers,
+        repeats=repeats,
+        colours=colours,
+        jokers=jokers,
+        min_len=min_len,
+    )
     cmd = SolverConsole(
         sg,
         # be tolerant of input character errors, don't break the console
