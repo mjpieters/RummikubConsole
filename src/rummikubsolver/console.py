@@ -354,20 +354,21 @@ class SolverConsole(Cmd):
         """rack | r
         Print the tiles on your rack
         """
+        tiles = [self._r_tile_map[t] for t in self.solver.rack]
         self.message("Your rack:")
         self.message(
             click.wrap_text(
-                ", ".join(_c(self._r_tile_map[t]) for t in self.solver.rack),
+                ", ".join(_c(t) for t in tiles),
                 initial_indent="  ",
                 subsequent_indent="  ",
                 width=click.get_terminal_size()[0],
             ),
         )
-        rack_count, rack_c_count = get_tile_count(self.solver.rack, self._r_tile_map)
+        counts = Counter(t[0] for t in tiles)
         self.message(
-            rack_count,
+            len(tiles),
             "tiles on rack:",
-            ", ".join([_c(f"{ct}{c}", c) for c, ct in rack_c_count.items()]),
+            ", ".join([_c(f"{ct}{c}", c) for c, ct in counts.items()]),
         )
 
     do_r = do_rack
@@ -376,20 +377,21 @@ class SolverConsole(Cmd):
         """table | t
         Print the tiles on the table
         """
+        tiles = [self._r_tile_map[t] for t in self.solver.table]
         self.message("On the table:")
         self.message(
             click.wrap_text(
-                ", ".join(_c(self._r_tile_map[t]) for t in self.solver.table),
+                ", ".join(_c(t) for t in tiles),
                 initial_indent="  ",
                 subsequent_indent="  ",
                 width=click.get_terminal_size()[0],
             ),
         )
-        table_count, table_c_count = get_tile_count(self.solver.table, self._r_tile_map)
+        counts = Counter(t[0] for t in tiles)
         self.message(
-            table_count,
+            len(tiles),
             "tiles on table:",
-            ", ".join([_c(f"{ct}{c}", c) for c, ct in table_c_count.items()]),
+            ", ".join([_c(f"{ct}{c}", c) for c, ct in counts.items()]),
         )
 
     do_t = do_table
@@ -592,13 +594,6 @@ def create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]
     tile_map = dict(zip(verbose_list, sg.tiles))
     r_tile_map = {v: k for k, v in tile_map.items()}
     return tile_map, r_tile_map
-
-
-def get_tile_count(tiles, r_tile_map):
-    tiles_list = [r_tile_map[t] for t in tiles]
-    colours = set([t[0] for t in tiles_list])
-    colour_count = {c: len([0 for t in tiles_list if t[0] == c]) for c in colours}
-    return len(tiles_list), colour_count
 
 
 @click.command(help="Rummikub Solver console")
