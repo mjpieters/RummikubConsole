@@ -250,9 +250,9 @@ class SolverConsole(Cmd):
         """rack | r
         Print the tiles on your rack
         """
+        self.message("Your rack:")
         self.message(
-            "Your rack:\n"
-            + click.wrap_text(
+            click.wrap_text(
                 ", ".join(_c(self._r_tile_map[t]) for t in self.solver.rack),
                 initial_indent="  ",
                 subsequent_indent="  ",
@@ -272,9 +272,9 @@ class SolverConsole(Cmd):
         """table | t
         Print the tiles on the table
         """
+        self.message("On the table:")
         self.message(
-            "On the table:\n"
-            + click.wrap_text(
+            click.wrap_text(
                 ", ".join(_c(self._r_tile_map[t]) for t in self.solver.table),
                 initial_indent="  ",
                 subsequent_indent="  ",
@@ -410,10 +410,17 @@ class SolverConsole(Cmd):
         tile_list = [solver.tiles[i] for i, t in enumerate(tiles) if t == 1]
         set_list = [solver.sets[i] for i, s in enumerate(sets) if s == 1]
         self.message("Using the following tiles from your rack:")
-        self.message(", ".join([_c(self._r_tile_map[t]) for t in tile_list]))
+        self.message(
+            click.wrap_text(
+                ", ".join([_c(self._r_tile_map[t]) for t in tile_list]),
+                initial_indent="  ",
+                subsequent_indent="  ",
+                width=click.get_terminal_size()[0],
+            )
+        )
         self.message("Make the following sets:")
         for s in set_list:
-            self.message(", ".join([_c(self._r_tile_map[t]) for t in s]))
+            self.message(" ", ", ".join([_c(self._r_tile_map[t]) for t in s]))
 
         if click.confirm(
             "Automatically place tiles for selected solution?", default=True
