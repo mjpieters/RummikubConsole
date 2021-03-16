@@ -13,6 +13,13 @@ from . import __version__
 from .set_generator import SetGenerator
 from .solver import RummikubSolver
 
+try:
+    import readline
+
+    has_readline = True
+except ImportError:
+    has_readline = False
+
 
 APPNAME = "RummikubSolver"
 APPAUTHOR = "OllieHooper"
@@ -84,10 +91,12 @@ class TileSource(Enum):
         return tiles
 
 
-def _fixed_completer(*options):
+def _fixed_completer(*options, case_insensitive=False):
     """Generate a completer for a fixed number of arguments"""
 
     def completer(self, text, *_):
+        if case_insensitive:
+            text = text.lower()
         return [opt for opt in options if opt.startswith(text)]
 
     return completer
@@ -110,25 +119,48 @@ class SolverConsole(Cmd):
         self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
         self._sg = sg
 
-    # adjust the completer to only split on whitespace; the default contains
-    # a range of shell punctuation this console never needs to split on and would
-    # otherwise place undue restrictions on game names.
-    def preloop(self):
-        try:
-            import readline
+    if not has_readline:
+        confirm = staticmethod(click.confirm)
+    else:
+        complete_confirm = _fixed_completer(
+            "n", "no", "y", "yes", case_insensitive=True
+        )
 
-            self._old_delims = readline.get_completer_delims()
-            readline.set_completer_delims(" \t\n")
-        except ImportError:
-            pass
+        def confirm(self, text, default=False):
+            """Confirm some action, with appropriate readline handling"""
+            before = readline.get_current_history_length()
+            # the completenames function is used to complete command names when
+            # the buffer is still empty. Temporarily hijack this.
+            self.completenames = self.complete_confirm
+            try:
+                return click.confirm(text, default=default)
+            finally:
+                del self.completenames
+                # remove the 'n'/'no'/'y'/'yes' entry from history
+                after = readline.get_current_history_length()
+                while after > before:
+                    after -= 1
+                    readline.remove_history_item(after)
 
-    def postloop(self):
-        try:
-            import readline
+        # adjust the completer to only split on whitespace; the default contains
+        # a range of shell punctuation this console never needs to split on and would
+        # otherwise place undue restrictions on game names.
+        def preloop(self):
+            try:
+                import readline
 
-            readline.set_completer_delims(self._old_delims)
-        except ImportError:
-            pass
+                self._old_delims = readline.get_completer_delims()
+                readline.set_completer_delims(" \t\n")
+            except ImportError:
+                pass
+
+        def postloop(self):
+            try:
+                import readline
+
+                readline.set_completer_delims(self._old_delims)
+            except ImportError:
+                pass
 
     @property
     def _games(self):
@@ -241,7 +273,7 @@ class SolverConsole(Cmd):
         if name not in self._games:
             self.error(f"No game named {name!r} to delete")
             return
-        if not click.confirm(f"Delete game {name}?"):
+        if not self.confirm(f"Delete game {name}?"):
             return
         switch_to = None
         if name == self._current_game:
@@ -299,7 +331,7 @@ class SolverConsole(Cmd):
                 "Invalid argument for clear, expected 'table' or 'rack', got ${arg!r}"
             )
             return
-        if not click.confirm(f"Clear {arg or 'the game'}?"):
+        if not self.confirm(f"Clear {arg or 'the game'}?"):
             return
 
         solver = self.solver
@@ -503,7 +535,7 @@ class SolverConsole(Cmd):
         for s in set_list:
             self.message(" ", ", ".join([_c(self._r_tile_map[t]) for t in s]))
 
-        if click.confirm(
+        if self.confirm(
             "Automatically place tiles for selected solution?", default=True
         ):
             solver.remove_rack(tile_list)
