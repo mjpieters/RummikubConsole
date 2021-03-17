@@ -7,7 +7,16 @@ from collections import Counter
 from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
-from typing import Callable, TypedDict, cast, Any, Optional, Sequence, TYPE_CHECKING
+from typing import (
+    Callable,
+    Iterable,
+    TypedDict,
+    cast,
+    Any,
+    Optional,
+    Sequence,
+    TYPE_CHECKING,
+)
 
 import click
 from appdirs import user_data_dir
@@ -146,6 +155,28 @@ def _fixed_completer(*options: str, case_insensitive: bool = False) -> Completer
         return [opt for opt in options if opt.startswith(text)]
 
     return completer
+
+
+def _tile_display(tiles: Iterable[str]) -> str:
+    """Format a sequence of tiles into columns
+
+    Takes into account terminal width, and adds ANSI colours to the tiles
+    displayed. A 2-space indent is added to all lines.
+
+    """
+    width = click.get_terminal_size()[0] - 4  # 2 space indent, 2 spaces margin
+    if width < 3:  # obviously too narrow for even a single tile, ignore
+        width = 76
+    used, line = 0, []
+    lines = [line]
+    for tile in tiles:
+        if used - 1 >= width:  # do not count a space at the end
+            # start a new line
+            used, line = 0, []
+            lines.append(line)
+        line.append(Colours.c(tile))
+        used += len(tile) + 2
+    return "  " + ",\n  ".join([", ".join(ln) for ln in lines])
 
 
 class SolverConsole(Cmd):
@@ -394,14 +425,7 @@ class SolverConsole(Cmd):
         """
         tiles = [self._r_tile_map[t] for t in self.solver.rack]
         self.message("Your rack:")
-        self.message(
-            click.wrap_text(
-                ", ".join(Colours.c(t) for t in tiles),
-                initial_indent="  ",
-                subsequent_indent="  ",
-                width=click.get_terminal_size()[0],
-            ),
-        )
+        self.message(_tile_display(tiles))
         counts = Counter(t[0] for t in tiles)
         self.message(
             len(tiles),
@@ -417,14 +441,7 @@ class SolverConsole(Cmd):
         """
         tiles = [self._r_tile_map[t] for t in self.solver.table]
         self.message("On the table:")
-        self.message(
-            click.wrap_text(
-                ", ".join(Colours.c(t) for t in tiles),
-                initial_indent="  ",
-                subsequent_indent="  ",
-                width=click.get_terminal_size()[0],
-            ),
-        )
+        self.message(_tile_display(tiles))
         counts = Counter(t[0] for t in tiles)
         self.message(
             len(tiles),
@@ -536,14 +553,7 @@ class SolverConsole(Cmd):
             return
 
         self.message("Using the following tiles from your rack:")
-        self.message(
-            click.wrap_text(
-                ", ".join([Colours.c(self._r_tile_map[t]) for t in tiles]),
-                initial_indent="  ",
-                subsequent_indent="  ",
-                width=click.get_terminal_size()[0],
-            )
-        )
+        self.message(_tile_display(self._r_tile_map[t]) for t in tiles)
         self.message("Make the following sets:")
         for s in sets:
             self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
