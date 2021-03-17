@@ -7,6 +7,7 @@ from collections import Counter
 from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
+from typing import Callable, TypedDict, cast, Any, Optional, Sequence, TYPE_CHECKING
 
 import click
 from appdirs import user_data_dir
@@ -21,6 +22,11 @@ try:
     has_readline = True
 except ImportError:
     has_readline = False
+
+
+if TYPE_CHECKING:
+    CompleterMethod = Callable[[Any, str, str, int, int], Sequence[str]]
+    ColourEnumStyle = TypedDict("ColourEnumStyle", {"fg": str, "reverse": bool})
 
 
 APPNAME = "RummikubSolver"
@@ -40,7 +46,11 @@ class Colours(Enum):
     cyan = "c", "cyan"
     joker = "j", "cyan", True
 
-    def __new__(cls, value, colour, reverse=False):
+    if TYPE_CHECKING:
+        value: str
+        style_args: ColourEnumStyle
+
+    def __new__(cls, value: str, colour: str = "white", reverse: bool = False):
         member = object.__new__(cls)
         member._value_ = value
         member.style_args = {"fg": f"bright_{colour}", "reverse": reverse}
@@ -76,13 +86,17 @@ class TileSource(Enum):
     TABLE = 2
 
     @property
-    def tile_completer(self):
+    def tile_completer(self) -> CompleterMethod:
         """Create a completer for a given tile source"""
 
-        def completer(console, text, line, begidx, endidx):
+        def completer(
+            console, text: str, line: str, begidx: int, endidx: int
+        ) -> Sequence[str]:
             """Complete tile names, but only those that are still available to place"""
             _, *args = (line[:begidx] + line[endidx:]).split()
-            avail = self.available(console) - Counter(map(console._tile_map.get, args))
+            avail = self.available(console) - Counter(
+                map(console._tile_map.__getitem__, args)
+            )
             rmap = console._r_tile_map
             return [
                 n for t, c in avail.items() if c and (n := rmap[t]).startswith(text)
@@ -90,7 +104,7 @@ class TileSource(Enum):
 
         return completer
 
-    def available(self, console) -> Counter[str]:
+    def available(self, console: SolverConsole) -> Counter[int]:
         solver = console.solver
         if self is TileSource.RACK:
             return Counter(solver.rack)
@@ -105,7 +119,7 @@ class TileSource(Enum):
         counts -= Counter(chain(solver.table, solver.rack))
         return counts
 
-    def parse_tiles(self, console, arg) -> list[int]:
+    def parse_tiles(self, console: SolverConsole, arg: str) -> Sequence[int]:
         avail = self.available(console)
         tiles = []
         for tile in arg.split():
@@ -121,10 +135,12 @@ class TileSource(Enum):
         return tiles
 
 
-def _fixed_completer(*options, case_insensitive=False):
+def _fixed_completer(*options: str, case_insensitive: bool = False) -> CompleterMethod:
     """Generate a completer for a fixed number of arguments"""
 
-    def completer(self, text, *_) -> list[str]:
+    def completer(
+        self: "SolverConsole", text: str, line: str, begidx: int, endidx: int
+    ) -> Sequence[str]:
         if case_insensitive:
             text = text.lower()
         return [opt for opt in options if opt.startswith(text)]
@@ -135,27 +151,29 @@ def _fixed_completer(*options, case_insensitive=False):
 class SolverConsole(Cmd):
     _shelve = None
     intro = "Welcome to the Rummikub Solver console\n"
+    prompt = "(rssolver) "
 
-    def __init__(self, sg=None, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, sg: SetGenerator, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._shelve_path = SAVEPATH / f"games_{sg.key}"
-        self._tile_map, self._r_tile_map = create_number_maps(sg)
+        self._tile_map, self._r_tile_map = _create_number_maps(sg)
         self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
         self._sg = sg
 
     if not has_readline:
-        confirm = staticmethod(click.confirm)
+        if not TYPE_CHECKING:
+            confirm = staticmethod(click.confirm)
     else:
         complete_confirm = _fixed_completer(
             "n", "no", "y", "yes", case_insensitive=True
         )
 
-        def confirm(self, text, default=False) -> bool:
+        def confirm(self, text: str, default: bool = False) -> bool:
             """Confirm some action, with appropriate readline handling"""
             before = readline.get_current_history_length()
             # the completenames function is used to complete command names when
             # the buffer is still empty. Temporarily hijack this.
-            self.completenames = self.complete_confirm
+            self.completenames = self.complete_confirm  # type: ignore
             try:
                 return click.confirm(text, default=default)
             finally:
@@ -187,26 +205,25 @@ class SolverConsole(Cmd):
                 pass
 
     @property
-    def _games(self):
+    def _games(self) -> dict[str, RummikubSolver]:
         if self._shelve is None:
             self._shelve_path.parent.mkdir(parents=True, exist_ok=True)
             self._shelve = shelve.open(str(self._shelve_path), writeback=True)
 
         if not len(self._shelve):
-            self._shelve[CURRENT] = DEFAULT_NAME
             self._shelve[DEFAULT_NAME] = self._new_game()
+            self._current_game = DEFAULT_NAME
 
-        return self._shelve
+        return cast(dict[str, RummikubSolver], self._shelve)
 
     @property
     def _current_game(self) -> str:
-        if self._shelve is None:
-            self._games  # force opening of the shelve
-        return self._shelve[CURRENT]
+        return cast(str, self._shelve and self._shelve[CURRENT] or DEFAULT_NAME)
 
     @_current_game.setter
     def _current_game(self, name: str) -> None:
-        self._shelve[CURRENT] = name
+        self._shelve[CURRENT] = name  # type: ignore
+        self.prompt = f"(rssolver) [{click.style(name, fg='bright_white')}] "
 
     def postcmd(self, stop: bool, line: str) -> bool:
         if self._shelve is not None:
@@ -216,10 +233,6 @@ class SolverConsole(Cmd):
     @property
     def solver(self) -> RummikubSolver:
         return self._games[self._current_game]
-
-    @property
-    def prompt(self) -> str:
-        return f"(rssolver) [{click.style(self._current_game, fg='bright_white')}] "
 
     def message(self, *msg: object) -> None:
         click.echo(" ".join(map(str, msg)), file=self.stdout)
@@ -266,7 +279,7 @@ class SolverConsole(Cmd):
 
     def _complete_name(
         self, text: str, line: str, begidx: int, endidx: int
-    ) -> list[str]:
+    ) -> Sequence[str]:
         # names can contain spaces, so match the whole line after the command
         # Completions should only list the *remainder* after any complete words
         # already entered, as the completer sees spaces as delimiters (and we
@@ -597,7 +610,7 @@ class SolverConsole(Cmd):
             solver.add_table(tile_list)
             self.message("Placed tiles on table")
 
-    def do_stop(self, arg: str) -> None:
+    def do_stop(self, arg: str) -> bool:
         """stop | end | quit
         Exit from the console
         """
@@ -629,7 +642,7 @@ class SolverConsole(Cmd):
         self.message(help_text)
 
 
-def create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]]:
+def _create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]]:
     cols = islice(Colours, sg.colours)
     verbose_list = [f"{c.value}{n + 1}" for c in cols for n in range(sg.numbers)]
     if sg.jokers:
@@ -681,7 +694,13 @@ def create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]
     metavar="M",
 )
 @click.version_option(__version__)
-def rcconsole(numbers=13, repeats=2, colours=4, jokers=2, min_len=3):
+def rcconsole(
+    numbers: int = 13,
+    repeats: int = 2,
+    colours: int = 4,
+    jokers: int = 2,
+    min_len: int = 3,
+):
     sg = SetGenerator(
         numbers=numbers,
         repeats=repeats,
@@ -690,7 +709,7 @@ def rcconsole(numbers=13, repeats=2, colours=4, jokers=2, min_len=3):
         min_len=min_len,
     )
     cmd = SolverConsole(
-        sg,
+        sg=sg,
         # be tolerant of input character errors, don't break the console
         stdin=click.get_text_stream("stdin", errors="replace"),
         stdout=click.get_text_stream("stdout"),
