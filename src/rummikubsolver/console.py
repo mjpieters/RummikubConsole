@@ -4,6 +4,7 @@ import shelve
 from cmd import Cmd
 from enum import Enum
 from collections import Counter
+from functools import partial
 from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
@@ -22,7 +23,7 @@ import click
 from appdirs import user_data_dir
 
 from . import __version__
-from .set_generator import SetGenerator
+from .ruleset import RuleSet
 from .solver import RummikubSolver
 
 try:
@@ -120,9 +121,9 @@ class TileSource(Enum):
         elif self is TileSource.TABLE:
             return Counter(solver.table)
         # NOT_PLAYED
-        sg = console._sg
-        repeats, jokers = sg.repeats, sg.jokers
-        counts = Counter({t: repeats for t in sg.tiles})
+        ruleset = console._ruleset
+        repeats, jokers = ruleset.repeats, ruleset.jokers
+        counts = Counter({t: repeats for t in ruleset.tiles})
         if jokers and jokers != repeats:
             counts[console._tile_map[JOKER]] = jokers
         counts -= Counter(chain(solver.table, solver.rack))
@@ -184,12 +185,12 @@ class SolverConsole(Cmd):
     intro = "Welcome to the Rummikub Solver console\n"
     prompt = "(rssolver) "
 
-    def __init__(self, *args: Any, sg: SetGenerator, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._shelve_path = SAVEPATH / f"games_{sg.key}"
-        self._tile_map, self._r_tile_map = _create_number_maps(sg)
-        self._new_game = lambda: RummikubSolver(tiles=sg.tiles, sets=sg.sets)
-        self._sg = sg
+        self._shelve_path = SAVEPATH / f"games_{ruleset.key}"
+        self._tile_map, self._r_tile_map = _create_number_maps(ruleset)
+        self._new_game = partial(RummikubSolver, tiles=ruleset.tiles, sets=ruleset.sets)
+        self._ruleset = ruleset
 
     if not has_readline:
         if not TYPE_CHECKING:
@@ -577,11 +578,11 @@ class SolverConsole(Cmd):
         ]
         set_list = [solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))]
 
-        if initial_meld and self._sg.jokers and self._tile_map[JOKER] in tile_list:
+        if initial_meld and self._ruleset.jokers and self._tile_map[JOKER] in tile_list:
             # at least one joker in the set; its replacement value is not included
             # when scoring for the initial setup.
             j = self._tile_map[JOKER]
-            n = self._sg.numbers
+            n = self._ruleset.numbers
             for set in set_list:
                 if j not in set:
                     continue
@@ -604,7 +605,7 @@ class SolverConsole(Cmd):
                             break
                     value += missing
 
-        if not tile_list or (initial_meld and value < self._sg.min_initial_value):
+        if not tile_list or (initial_meld and value < self._ruleset.min_initial_value):
             return (), ()
 
         if initial_meld and solver.table:
@@ -641,7 +642,7 @@ class SolverConsole(Cmd):
     do_EOF = do_stop
 
     def help_tiles(self) -> None:
-        cols = chain(islice(Colours, self._sg.colours), (Colours.joker,))
+        cols = chain(islice(Colours, self._ruleset.colours), (Colours.joker,))
         help_text = dedent(
             """
             Commands that take tile arguments accept 1 or more tile
@@ -661,7 +662,7 @@ class SolverConsole(Cmd):
         self.message(help_text)
 
 
-def _create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]]:
+def _create_number_maps(sg: RuleSet) -> tuple[dict[str, int], dict[int, str]]:
     cols = islice(Colours, sg.colours)
     verbose_list = [f"{c.value}{n + 1}" for c in cols for n in range(sg.numbers)]
     if sg.jokers:
@@ -728,7 +729,7 @@ def rcconsole(
     min_len: int = 3,
     min_initial_value: int = 30,
 ):
-    sg = SetGenerator(
+    sg = RuleSet(
         numbers=numbers,
         repeats=repeats,
         colours=colours,
