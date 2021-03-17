@@ -553,7 +553,7 @@ class SolverConsole(Cmd):
             return
 
         self.message("Using the following tiles from your rack:")
-        self.message(_tile_display(self._r_tile_map[t]) for t in tiles)
+        self.message(_tile_display(self._r_tile_map[t] for t in tiles))
         self.message("Make the following sets:")
         for s in sets:
             self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
