@@ -167,8 +167,8 @@ def _tile_display(tiles: Iterable[str]) -> str:
     width = click.get_terminal_size()[0] - 4  # 2 space indent, 2 spaces margin
     if width < 3:  # obviously too narrow for even a single tile, ignore
         width = 76
-    used, line = 0, []
-    lines = [line]
+    line: list[str] = []
+    lines, used = [line], 0
     for tile in tiles:
         if used - 1 >= width:  # do not count a space at the end
             # start a new line
