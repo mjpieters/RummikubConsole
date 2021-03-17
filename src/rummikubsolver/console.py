@@ -4,7 +4,7 @@ import shelve
 from cmd import Cmd
 from enum import Enum
 from collections import Counter
-from itertools import chain
+from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
 
@@ -26,15 +26,44 @@ except ImportError:
 APPNAME = "RummikubSolver"
 APPAUTHOR = "OllieHooper"
 SAVEPATH = Path(user_data_dir(APPNAME, APPAUTHOR))
-COLOURS = "k", "b", "o", "r"  # blacK, Blue, Orange and Red
-JOKER = "j"
-CMAP = {
-    "k": {"fg": "black", "bg": "white"},
-    "b": {"fg": "cyan"},
-    "o": {"fg": "yellow"},
-    "r": {"fg": "red"},
-    "j": {"fg": "white"},
-}
+
+
+class Colours(Enum):
+    #   letter, ANSI base color, reverse flag
+    black = "k", "white", True
+    blue = "b", "blue"
+    orange = "o", "yellow"
+    red = "r", "red"
+    green = "g", "green"
+    magenta = "m", "magenta"
+    white = "w", "white"
+    cyan = "c", "cyan"
+    joker = "j", "cyan", True
+
+    def __new__(cls, value, colour, reverse=False):
+        member = object.__new__(cls)
+        member._value_ = value
+        member.style_args = {"fg": f"bright_{colour}", "reverse": reverse}
+        return member
+
+    @classmethod
+    def c(cls, text: str, prefix: Optional[str] = None):
+        """Add ANSI colour codes to a tile"""
+        prefix = prefix or text[0]
+        return cls(prefix).style(text)
+
+    def style(self, text: str) -> str:
+        return click.style(text, **self.style_args)
+
+    def __str__(self):
+        name = self.name
+        lidx = name.index(self.value)
+        if lidx <= 0:
+            return name.title()
+        return name[:lidx] + name[lidx].upper() + name[lidx + 1 :]
+
+
+JOKER = Colours.joker.value
 CURRENT = "__current_game__"
 DEFAULT_NAME = "default"
 
@@ -101,12 +130,6 @@ def _fixed_completer(*options, case_insensitive=False):
         return [opt for opt in options if opt.startswith(text)]
 
     return completer
-
-
-def _c(t, prefix=None) -> str:
-    """Add ANSI colour codes to a tile"""
-    prefix = prefix or t[0]
-    return click.style(t, **CMAP[prefix])
 
 
 class SolverConsole(Cmd):
@@ -355,7 +378,7 @@ class SolverConsole(Cmd):
         self.message("Your rack:")
         self.message(
             click.wrap_text(
-                ", ".join(_c(t) for t in tiles),
+                ", ".join(Colours.c(t) for t in tiles),
                 initial_indent="  ",
                 subsequent_indent="  ",
                 width=click.get_terminal_size()[0],
@@ -365,7 +388,7 @@ class SolverConsole(Cmd):
         self.message(
             len(tiles),
             "tiles on rack:",
-            ", ".join([_c(f"{ct}{c}", c) for c, ct in counts.items()]),
+            ", ".join([Colours.c(f"{ct}{c}", c) for c, ct in counts.items()]),
         )
 
     do_r = do_rack
@@ -378,7 +401,7 @@ class SolverConsole(Cmd):
         self.message("On the table:")
         self.message(
             click.wrap_text(
-                ", ".join(_c(t) for t in tiles),
+                ", ".join(Colours.c(t) for t in tiles),
                 initial_indent="  ",
                 subsequent_indent="  ",
                 width=click.get_terminal_size()[0],
@@ -388,7 +411,7 @@ class SolverConsole(Cmd):
         self.message(
             len(tiles),
             "tiles on table:",
-            ", ".join([_c(f"{ct}{c}", c) for c, ct in counts.items()]),
+            ", ".join([Colours.c(f"{ct}{c}", c) for c, ct in counts.items()]),
         )
 
     do_t = do_table
@@ -557,7 +580,7 @@ class SolverConsole(Cmd):
         self.message("Using the following tiles from your rack:")
         self.message(
             click.wrap_text(
-                ", ".join([_c(self._r_tile_map[t]) for t in tile_list]),
+                ", ".join([Colours.c(self._r_tile_map[t]) for t in tile_list]),
                 initial_indent="  ",
                 subsequent_indent="  ",
                 width=click.get_terminal_size()[0],
@@ -565,7 +588,7 @@ class SolverConsole(Cmd):
         )
         self.message("Make the following sets:")
         for s in set_list:
-            self.message(" ", ", ".join([_c(self._r_tile_map[t]) for t in s]))
+            self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
 
         if self.confirm(
             "Automatically place tiles for selected solution?", default=True
@@ -586,34 +609,31 @@ class SolverConsole(Cmd):
     do_EOF = do_stop
 
     def help_tiles(self) -> None:
-        self.message(
-            dedent(
-                """
+        cols = chain(islice(Colours, self._sg.colours), (Colours.joker,))
+        help_text = dedent(
+            """
             Commands that take tile arguments accept 1 or more tile
             specifications. Tiles have a _colour_ and a _number_, and you name
             tiles by combining 1 letter representing the colour of the tile with
-            a number. Any jokers are represented by the letter "j".
+            a number. Any jokers are represented by the letter "j", and no
+            number.
 
-            The supported colours are:
+            The supported tile codes are:
 
-            - k: blacK
-            - b: Blue
-            - o: Orange
-            - r: Red
+            {tile_list}
 
             For example, if you picked a black 13, a red 7 and a joker, you can
             add these to your rack with the command "addrack k13 r7 j".
-        """
-            )
-        )
+            """
+        ).format(tile_list="\n".join([f"- {c.style(c.value)}: {c}" for c in cols]))
+        self.message(help_text)
 
 
 def create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str]]:
-    verbose_list = [
-        f"{COLOURS[c]}{n}" for c in range(sg.colours) for n in range(1, sg.numbers + 1)
-    ]
+    cols = islice(Colours, sg.colours)
+    verbose_list = [f"{c.value}{n + 1}" for c in cols for n in range(sg.numbers)]
     if sg.jokers:
-        verbose_list.append(JOKER)
+        verbose_list.append(Colours.joker.value)
     tile_map = dict(zip(verbose_list, sg.tiles))
     r_tile_map = {v: k for k, v in tile_map.items()}
     return tile_map, r_tile_map
