@@ -519,7 +519,7 @@ class SolverConsole(Cmd):
         Attempt to place tiles.
 
         You can either maximize for number of tiles placed, the maximum value
-        placed, or you can try to place your initial tiles (adding up to 30).
+        placed, or you can try to place your initial tiles.
 
         The default action is to try to maximise the number of tiles placed.
         """
@@ -594,7 +594,7 @@ class SolverConsole(Cmd):
                             break
                     value += missing
 
-        if value < (30 if initial_meld else 1):
+        if not tile_list or (initial_meld and value < self._sg.min_initial_value):
             return (), ()
 
         if initial_meld and solver.table:
@@ -702,6 +702,13 @@ def _create_number_maps(sg: SetGenerator) -> tuple[dict[str, int], dict[int, str
     help="Mininum number of tiles in a set (2 - 6)",
     metavar="M",
 )
+@click.option(
+    "--min-initial-value",
+    default=30,
+    show_default=True,
+    type=click.IntRange(1, 50),
+    help="Minimal tile sum required as opening move",
+)
 @click.version_option(__version__)
 def rcconsole(
     numbers: int = 13,
@@ -709,6 +716,7 @@ def rcconsole(
     colours: int = 4,
     jokers: int = 2,
     min_len: int = 3,
+    min_initial_value: int = 30,
 ):
     sg = SetGenerator(
         numbers=numbers,
@@ -716,6 +724,7 @@ def rcconsole(
         colours=colours,
         jokers=jokers,
         min_len=min_len,
+        min_initial_value=min_initial_value,
     )
     cmd = SolverConsole(
         sg=sg,

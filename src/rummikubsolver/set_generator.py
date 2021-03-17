@@ -2,12 +2,21 @@ from itertools import combinations
 
 
 class SetGenerator:
-    def __init__(self, numbers=13, repeats=2, colours=4, jokers=2, min_len=3):
+    def __init__(
+        self,
+        numbers=13,
+        repeats=2,
+        colours=4,
+        jokers=2,
+        min_len=3,
+        min_initial_value=30,
+    ):
         self.numbers = numbers
         self.repeats = repeats
         self.colours = colours
         self.jokers = jokers
         self.min_len = min_len
+        self.min_initial_value = min_initial_value
         self.tiles = self.generate_tiles()
         self.runs = set()
         self.groups = set()
