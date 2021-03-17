@@ -530,13 +530,36 @@ class SolverConsole(Cmd):
             return
         initial_meld = arg == "initial"
         maximise = "tiles" if arg == "tiles" else "value"
-        self.print_solution(maximise=maximise, initial_meld=initial_meld)
+        tiles, sets = self._solve(maximise=maximise, initial_meld=initial_meld)
+        if not tiles:
+            self.message("No solution found - pick up a tile.")
+            return
+
+        self.message("Using the following tiles from your rack:")
+        self.message(
+            click.wrap_text(
+                ", ".join([Colours.c(self._r_tile_map[t]) for t in tiles]),
+                initial_indent="  ",
+                subsequent_indent="  ",
+                width=click.get_terminal_size()[0],
+            )
+        )
+        self.message("Make the following sets:")
+        for s in sets:
+            self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
+
+        if self.confirm(
+            "Automatically place tiles for selected solution?", default=True
+        ):
+            self.solver.remove_rack(tiles)
+            self.solver.add_table(tiles)
+            self.message("Placed tiles on table")
 
     complete_solve = _fixed_completer("tiles", "value", "initial")
 
-    def print_solution(
+    def _solve(
         self, maximise: str = "tiles", initial_meld: bool = False
-    ) -> None:
+    ) -> tuple[Sequence[int], Sequence[tuple[int, ...]]]:
         solver = self.solver
         value, tiles, sets = solver.solve(maximise=maximise, initial_meld=initial_meld)
         tile_list = [
@@ -572,8 +595,7 @@ class SolverConsole(Cmd):
                     value += missing
 
         if value < (30 if initial_meld else 1):
-            self.message("No solution found - pick up a tile.")
-            return
+            return (), ()
 
         if initial_meld and solver.table:
             # Run the solver again to see if more tiles can be placed after the
@@ -595,25 +617,7 @@ class SolverConsole(Cmd):
             solver.remove_table(tile_list)
             solver.add_rack(tile_list)
 
-        self.message("Using the following tiles from your rack:")
-        self.message(
-            click.wrap_text(
-                ", ".join([Colours.c(self._r_tile_map[t]) for t in tile_list]),
-                initial_indent="  ",
-                subsequent_indent="  ",
-                width=click.get_terminal_size()[0],
-            )
-        )
-        self.message("Make the following sets:")
-        for s in set_list:
-            self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
-
-        if self.confirm(
-            "Automatically place tiles for selected solution?", default=True
-        ):
-            solver.remove_rack(tile_list)
-            solver.add_table(tile_list)
-            self.message("Placed tiles on table")
+        return tile_list, set_list
 
     def do_stop(self, arg: str) -> bool:
         """stop | end | quit
