@@ -506,8 +506,9 @@ class SolverConsole(Cmd):
         ]
         set_list = [solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))]
 
-        if self._sg.jokers and self._tile_map[JOKER] in tile_list:
+        if initial_meld and self._sg.jokers and self._tile_map[JOKER] in tile_list:
             # at least one joker in the set; its replacement value is not included
+            # when scoring for the initial setup.
             j = self._tile_map[JOKER]
             n = self._sg.numbers
             for set in set_list:
