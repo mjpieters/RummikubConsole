@@ -25,9 +25,7 @@ class RummikubSolver:
         self.rack_array = np.array([self.rack.count(self.tiles[i]) for i in range(len(self.tiles))])
 
     def add_rack(self, additions):
-        for i in additions:
-            self.rack.append(i)
-            self.rack = sorted(self.rack)
+        self.rack = sorted([*self.rack, *additions])
         self.update_arrays()
 
     def remove_rack(self, removals):
@@ -39,9 +37,7 @@ class RummikubSolver:
         self.update_arrays()
 
     def add_table(self, additions):
-        for i in additions:
-            self.table.append(i)
-            self.table = sorted(self.table)
+        self.table = sorted([*self.table, *additions])
         self.update_arrays()
 
     def remove_table(self, removals):
