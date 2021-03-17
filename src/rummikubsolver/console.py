@@ -189,7 +189,7 @@ class SolverConsole(Cmd):
         super().__init__(*args, **kwargs)
         self._shelve_path = SAVEPATH / f"games_{ruleset.key}"
         self._tile_map, self._r_tile_map = _create_number_maps(ruleset)
-        self._new_game = partial(RummikubSolver, tiles=ruleset.tiles, sets=ruleset.sets)
+        self._new_game = partial(RummikubSolver, ruleset)
         self._ruleset = ruleset
 
     if not has_readline:

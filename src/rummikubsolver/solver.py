@@ -1,92 +1,99 @@
 import cvxpy as cp
 import numpy as np
 
+from .ruleset import RuleSet
+
 
 class RummikubSolver:
 
-    def __init__(self, tiles, sets, numbers=13, colours=4, rack=[], table=[]):
-        self.tiles = np.array(tiles)
-        self.sets = list(sorted(sets))
-        self.table = sorted(table)
-        self.rack = sorted(rack)
+    def __init__(self, ruleset: RuleSet):
+        self.sets = sorted(ruleset.sets)
+        self.repeats = ruleset.repeats
+        self.table, self.rack = [], []
 
-        self.value = np.array([v for c in range(colours) for v in range(1, numbers+1)])
-        if self.value.shape != self.tiles.shape:
-            self.value = np.append(self.value, 0)
+        # array of tile 'names', each tile is really index + 1
+        self.tiles = np.array(ruleset.tiles, dtype=np.uint16)
+        # values for each tile number
+        value = np.tile(
+            np.arange(ruleset.numbers, dtype=np.uint16) + 1, ruleset.colours
+        )
+        if ruleset.joker is not None:
+            # add 0 value for the joker
+            value = np.append(value, 0)
+        self.value = value
 
+        # matrix of booleans; is a given tile a member of the given set
+        # each column is a set, each row a tile
         self.sets_matrix = np.array(
-            [np.array([self.sets[j].count(self.tiles[i]) for j in range(len(self.sets))]) for i in
-             range(len(self.tiles))])
-        self.table_array = np.array([self.table.count(self.tiles[i]) for i in range(len(self.tiles))])
-        self.rack_array = np.array([self.rack.count(self.tiles[i]) for i in range(len(self.tiles))])
+            [[t in set for set in self.sets] for t in ruleset.tiles],
+            dtype=np.bool,
+        )
 
-    def update_arrays(self):
-        tcounts, rcounts = Counter(self.table), Counter(self.rack)
-        self.table_array = np.array([tcounts[t] for t in self.tiles])
-        self.rack_array = np.array([rcounts[t] for t in self.tiles])
+        # how many of each tile are placed on the table or player rack?
+        self.table_array = np.zeros(self.tiles.shape, dtype=np.uint8)
+        self.rack_array = np.zeros(self.tiles.shape, dtype=np.uint8)
 
     def add_rack(self, additions):
         self.rack = sorted([*self.rack, *additions])
-        self.update_arrays()
+        self.rack_array[[t - 1 for t in additions]] += 1
 
     def remove_rack(self, removals):
-        for i in removals:
+        rack, rack_array = self.rack, self.rack_array
+        for t in removals:
             try:
-                self.rack.remove(i)
+                rack.remove(t)
+                rack_array[t - 1] -= 1
             except ValueError:
-                print(f'{i} not on rack')
-        self.update_arrays()
+                print(f"{t} not on rack")
 
     def add_table(self, additions):
         self.table = sorted([*self.table, *additions])
-        self.update_arrays()
+        self.table_array[[t - 1 for t in additions]] += 1
 
     def remove_table(self, removals):
-        for i in removals:
+        for t in removals:
             try:
-                self.table.remove(i)
+                self.table.remove(t)
+                self.table_array[t - 1] -= 1
             except ValueError:
-                print(f'{i} not on table')
-        self.update_arrays()
+                print(f"{t} not on table")
 
-    def solve(self, maximise='tiles', initial_meld=False):
-        i = range(len(self.tiles))
-        j = range(len(self.sets))
-
-        s = self.sets_matrix
+    def solve(self, maximise="tiles", initial_meld=None):
+        if initial_meld is None:
+            initial_meld = self.initial
         if initial_meld:
-            t = np.zeros(self.table_array.shape)
-        else:
-            t = self.table_array
-        r = self.rack_array
-        v = self.value
+            maximise = "value"
 
-        x = cp.Variable(len(j), integer=True)
-        y = cp.Variable(len(i), integer=True)
+        table = self.table_array
+        if initial_meld:
+            table = np.zeros_like(table)
 
-        if maximise == 'tiles':
-            obj = cp.Maximize(cp.sum(y))
-        elif maximise == 'value':
-            obj = cp.Maximize(cp.sum(v @ y))
-        else:
-            print('Invalid maximise function')
-            return 0, np.zeros(len(j)), np.zeros(len(i)),
+        rack = self.rack_array
+        value = self.value
+
+        smatrix = self.sets_matrix
+        ntiles, nsets = smatrix.shape
+        vsets = cp.Variable(nsets, integer=True)
+        vtiles = cp.Variable(ntiles, integer=True)
+
+        target = vtiles
+        if maximise == "value":
+            target = value @ target
+        objective = cp.Maximize(cp.sum(target))
 
         constraints = [
-            s @ x == t + y,
-            y <= r,
-            -x <= 0,
-            x <= 2,
-            -y <= 0,
-            y <= 2,
+            # sets can only be taken from available and selected tiles
+            smatrix @ vsets == table + vtiles,
+            # the selected tiles must all come from the rack
+            vtiles <= rack,
+            # sets can be repeated between 0 and max repeats times
+            -vsets <= 0,
+            vsets <= self.repeats,
+            # tiles can be repeated between 0 and max repeats times
+            -vtiles <= 0,
+            vtiles <= self.repeats,
+            # TODO: Add separate constraints for jokers!
         ]
 
-        prob = cp.Problem(obj, constraints)
-        prob.solve(solver=cp.GLPK_MI)
-
-        if len(list(prob.solution.primal_vars.keys())) == 0:
-            print('No prob.solution.primal_vars')
-            return 0, np.zeros(len(i)), np.zeros(len(j))
-
-        return prob.value, prob.solution.primal_vars[list(prob.solution.primal_vars.keys())[0]], \
-               prob.solution.primal_vars[list(prob.solution.primal_vars.keys())[1]]
+        prob = cp.Problem(objective, constraints)
+        return prob.solve(solver=cp.GLPK_MI), vtiles.value, vsets.value
