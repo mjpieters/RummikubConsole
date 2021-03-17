@@ -188,6 +188,8 @@ class SolverConsole(Cmd):
         # a range of shell punctuation this console never needs to split on and would
         # otherwise place undue restrictions on game names.
         def preloop(self) -> None:
+            # trigger loading the shelve
+            self._games
             try:
                 import readline
 
@@ -210,9 +212,12 @@ class SolverConsole(Cmd):
             self._shelve_path.parent.mkdir(parents=True, exist_ok=True)
             self._shelve = shelve.open(str(self._shelve_path), writeback=True)
 
-        if not len(self._shelve):
-            self._shelve[DEFAULT_NAME] = self._new_game()
-            self._current_game = DEFAULT_NAME
+            if not len(self._shelve):
+                self._shelve[DEFAULT_NAME] = self._new_game()
+                self._current_game = DEFAULT_NAME
+
+            # after loading, make sure the prompt is correctly set.
+            self._current_game = self._current_game
 
         return cast(dict[str, RummikubSolver], self._shelve)
 
