@@ -88,7 +88,7 @@ class TileSource(Enum):
                 if tile == JOKER:
                     console.error("Too many jokers in the game, can't add more.")
                 else:
-                    self.error(f"Too many repeats for {tile}, can't add more.")
+                    console.error(f"Too many repeats for {tile}, can't add more.")
                 continue
             avail[t] -= 1
             tiles.append(t)
