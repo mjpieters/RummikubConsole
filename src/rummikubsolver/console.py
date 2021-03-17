@@ -513,12 +513,16 @@ class SolverConsole(Cmd):
                     continue
                 values = [((t - 1) % n) + 1 for t in set if t != j]
                 if all(v == values[0] for v in values):
-                    # same value, different colours. The joker has the same colour
+                    # same value, different colours. The joker has the same value
+                    # e.g. blue 10, red 10 and a joker => 10
                     value += values[0]
                 else:
                     # tiles of the same colour, ranked, find missing tile or
                     # use max + 1 (unless that falls outside the number range,
                     # then use n - 2)
+                    # e.g. black 10, black 11, joker, black 13 => 12
+                    #      joker, black 12, black 13 => 11
+                    #      black 8, black 9, joker => 10
                     missing = values[-1] + 1 if values[-1] != n else n - 2
                     for expected, actual in enumerate(values, start=values[0]):
                         if expected != actual:
