@@ -534,6 +534,26 @@ class SolverConsole(Cmd):
             self.message("No solution found - pick up a tile.")
             return
 
+        if initial_meld and solver.table:
+            # Run the solver again to see if more tiles can be placed after the
+            # initial opening run. Temporarily move the opening tiles to the
+            # table for this, to be returned to the rack after running this step;
+            # the two sets of tile moves are then combined and onlyl the second
+            # table solution is shown as the outcome.
+            solver.remove_rack(tile_list)
+            solver.add_table(tile_list)
+            _, tiles, sets = solver.solve(maximise=maximise, initial_meld=False)
+            additional_tiles = [
+                solver.tiles[i] for i, t in enumerate(tiles) for _ in range(int(t))
+            ]
+            if additional_tiles:
+                tile_list += additional_tiles
+                set_list = [
+                    solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))
+                ]
+            solver.remove_table(tile_list)
+            solver.add_rack(tile_list)
+
         self.message("Using the following tiles from your rack:")
         self.message(
             click.wrap_text(
