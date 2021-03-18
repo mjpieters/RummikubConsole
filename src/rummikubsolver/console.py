@@ -141,7 +141,7 @@ class SolverConsole(Cmd):
     def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._shelve_path = SAVEPATH / f"games_{ruleset.key}"
-        self._tile_map, self._r_tile_map = _create_number_maps(ruleset)
+        self._tile_map, self._r_tile_map = ruleset.create_number_maps()
         self._new_game = partial(RummikubSolver, ruleset)
         self._ruleset = ruleset
 
@@ -672,16 +672,6 @@ class SolverConsole(Cmd):
             """
         ).format(tile_list="\n".join([f"- {c.style(c.value)}: {c}" for c in cols]))
         self.message(help_text)
-
-
-def _create_number_maps(ruleset: RuleSet) -> tuple[dict[str, int], dict[int, str]]:
-    cols = islice(Colours, ruleset.colours)
-    verbose_list = [f"{c.value}{n + 1}" for c in cols for n in range(ruleset.numbers)]
-    if ruleset.jokers:
-        verbose_list.append(Colours.joker.value)
-    tile_map = dict(zip(verbose_list, ruleset.tiles))
-    r_tile_map = {v: k for k, v in tile_map.items()}
-    return tile_map, r_tile_map
 
 
 @click.command(help="Rummikub Solver console")

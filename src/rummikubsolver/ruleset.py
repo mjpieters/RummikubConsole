@@ -1,6 +1,8 @@
 from functools import cached_property
-from itertools import chain, combinations, product
+from itertools import chain, combinations, islice, product
 from typing import Iterable, Optional, Sequence
+
+from .types import Colours
 
 
 class RuleSet:
@@ -34,6 +36,14 @@ class RuleSet:
         if self.jokers:
             return self.numbers * self.colours + 1
         return None
+
+    def create_tile_maps(self) -> tuple[dict[str, int], dict[int, str]]:
+        """Create tile number -> name and name -> tile number maps"""
+        cols, nums = islice(Colours, self.colours), range(self.numbers)
+        names = [f"{c.value}{n + 1}" for c, n in product(cols, nums)]
+        if self.joker:
+            names.append(Colours.joker.value)
+        return dict(zip(names, self.tiles)), dict(zip(self.tiles, names))
 
     @cached_property
     def tiles(self) -> Sequence[int]:
