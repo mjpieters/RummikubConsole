@@ -4,20 +4,10 @@ import shelve
 from cmd import Cmd
 from enum import Enum
 from collections import Counter
-from functools import partial
 from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
-from typing import (
-    Callable,
-    Iterable,
-    TypedDict,
-    cast,
-    Any,
-    Optional,
-    Sequence,
-    TYPE_CHECKING,
-)
+from typing import Callable, Iterable, cast, Any, Sequence, TYPE_CHECKING
 
 import click
 from appdirs import user_data_dir
@@ -25,6 +15,7 @@ from appdirs import user_data_dir
 from . import __version__
 from .ruleset import RuleSet
 from .solver import RummikubSolver
+from .types import Colours, SolverMode
 
 try:
     import readline
@@ -36,51 +27,11 @@ except ImportError:
 
 if TYPE_CHECKING:
     CompleterMethod = Callable[[Any, str, str, int, int], Sequence[str]]
-    ColourEnumStyle = TypedDict("ColourEnumStyle", {"fg": str, "reverse": bool})
 
 
 APPNAME = "RummikubSolver"
 APPAUTHOR = "OllieHooper"
 SAVEPATH = Path(user_data_dir(APPNAME, APPAUTHOR))
-
-
-class Colours(Enum):
-    #   letter, ANSI base color, reverse flag
-    black = "k", "white", True
-    blue = "b", "blue"
-    orange = "o", "yellow"
-    red = "r", "red"
-    green = "g", "green"
-    magenta = "m", "magenta"
-    white = "w", "white"
-    cyan = "c", "cyan"
-    joker = "j", "cyan", True
-
-    if TYPE_CHECKING:
-        value: str
-        style_args: ColourEnumStyle
-
-    def __new__(cls, value: str, colour: str = "white", reverse: bool = False):
-        member = object.__new__(cls)
-        member._value_ = value
-        member.style_args = {"fg": f"bright_{colour}", "reverse": reverse}
-        return member
-
-    @classmethod
-    def c(cls, text: str, prefix: Optional[str] = None):
-        """Add ANSI colour codes to a tile"""
-        prefix = prefix or text[0]
-        return cls(prefix).style(text)
-
-    def style(self, text: str) -> str:
-        return click.style(text, **self.style_args)
-
-    def __str__(self):
-        name = self.name
-        lidx = name.index(self.value)
-        if lidx <= 0:
-            return name.title()
-        return name[:lidx] + name[lidx].upper() + name[lidx + 1 :]
 
 
 JOKER = Colours.joker.value
