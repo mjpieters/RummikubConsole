@@ -22,12 +22,14 @@ class RuleSet:
         self.min_len = min_len
         self.min_initial_value = min_initial_value
 
-    @property
-    def key(self) -> str:
-        """Short string uniquely identifying this ruleset"""
+    @cached_property
+    def game_state_key(self) -> str:
+        """Short string uniquely identifying game states that fit this ruleset"""
+        # minimal initial value and minimum set length are not reflected in
+        # the game state data so are not part of the key.
         keys = zip(
-            "nrcjm",
-            (self.numbers, self.repeats, self.colours, self.jokers, self.min_len),
+            "nrcj",
+            (self.numbers, self.repeats, self.colours, self.jokers),
         )
         return "".join([f"{k}{v}" for k, v in keys])
 
