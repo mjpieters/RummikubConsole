@@ -662,12 +662,12 @@ class SolverConsole(Cmd):
         self.message(help_text)
 
 
-def _create_number_maps(sg: RuleSet) -> tuple[dict[str, int], dict[int, str]]:
-    cols = islice(Colours, sg.colours)
-    verbose_list = [f"{c.value}{n + 1}" for c in cols for n in range(sg.numbers)]
-    if sg.jokers:
+def _create_number_maps(ruleset: RuleSet) -> tuple[dict[str, int], dict[int, str]]:
+    cols = islice(Colours, ruleset.colours)
+    verbose_list = [f"{c.value}{n + 1}" for c in cols for n in range(ruleset.numbers)]
+    if ruleset.jokers:
         verbose_list.append(Colours.joker.value)
-    tile_map = dict(zip(verbose_list, sg.tiles))
+    tile_map = dict(zip(verbose_list, ruleset.tiles))
     r_tile_map = {v: k for k, v in tile_map.items()}
     return tile_map, r_tile_map
 
@@ -729,7 +729,7 @@ def rcconsole(
     min_len: int = 3,
     min_initial_value: int = 30,
 ):
-    sg = RuleSet(
+    ruleset = RuleSet(
         numbers=numbers,
         repeats=repeats,
         colours=colours,
@@ -738,7 +738,7 @@ def rcconsole(
         min_initial_value=min_initial_value,
     )
     cmd = SolverConsole(
-        sg=sg,
+        ruleset=ruleset,
         # be tolerant of input character errors, don't break the console
         stdin=click.get_text_stream("stdin", errors="replace"),
         stdout=click.get_text_stream("stdout"),
