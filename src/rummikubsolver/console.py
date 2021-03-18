@@ -548,7 +548,7 @@ class SolverConsole(Cmd):
 
         game = self.game
         sol = self._ruleset.solve(game, mode)
-        if not sol.tiles:
+        if sol is None:
             self.message("No solution found - pick up a tile.")
             return
 
