@@ -22,6 +22,12 @@ class RuleSet:
         self.min_len = min_len
         self.min_initial_value = min_initial_value
 
+        self.tile_count = numbers * colours
+        self.joker = None
+        if jokers:
+            self.tile_count += 1
+            self.joker = self.tile_count
+
     @cached_property
     def game_state_key(self) -> str:
         """Short string uniquely identifying game states that fit this ruleset"""
@@ -33,12 +39,6 @@ class RuleSet:
         )
         return "".join([f"{k}{v}" for k, v in keys])
 
-    @cached_property
-    def joker(self) -> Optional[int]:
-        if self.jokers:
-            return self.numbers * self.colours + 1
-        return None
-
     def create_tile_maps(self) -> tuple[dict[str, int], dict[int, str]]:
         """Create tile number -> name and name -> tile number maps"""
         cols, nums = islice(Colours, self.colours), range(self.numbers)
@@ -49,16 +49,13 @@ class RuleSet:
 
     @cached_property
     def tiles(self) -> Sequence[int]:
-        tiles = list(range(1, self.numbers * self.colours + 1))
-        joker = self.joker
-        return tiles if joker is None else [*tiles, joker]
+        return list(range(1, self.tile_count + 1))
 
     @cached_property
     def sets(self) -> set[tuple[int]]:
         return {()} | self.runs | self.groups
 
-    @cached_property
-    def runs(self) -> set[tuple[int]]:
+    def _runs(self) -> set[tuple[int]]:
         colours, ns = range(self.colours), self.numbers
         lengths = range(self.min_len, self.min_len * 2)
         # runs start at a given coloured tile, and are between min_len and
@@ -70,8 +67,7 @@ class RuleSet:
         )
         return self._combine_with_jokers(series)
 
-    @cached_property
-    def groups(self) -> set[tuple[int]]:
+    def _groups(self) -> set[tuple[int]]:
         ns, cs = self.numbers, self.colours
         # groups are between min_len and #colours long, a group per possible
         # tile number value.
