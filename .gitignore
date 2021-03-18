@@ -4,3 +4,4 @@ __pycache__
 *.db
 .eggs/
 Pipfile.lock
+*.egg-info/
