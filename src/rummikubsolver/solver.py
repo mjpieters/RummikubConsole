@@ -1,103 +1,130 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 import cvxpy as cp
 import numpy as np
 
-from .ruleset import RuleSet
+from .gamestate import GameState
+from .types import SolverMode, SolverSolution
+
+
+if TYPE_CHECKING:
+    from .ruleset import RuleSet
 
 
 class RummikubSolver:
+    """Solvers for finding possible tile placements in Rummikub games
 
-    initial: bool = True  # initial game state, not on the table yet
+    Buids on the approach described by den Hertog, Dick & Hulshof,
+    P.. (2006). Solving Rummikub Problems by Integer Linear Programming.
+    The Computer Journal. 49. 10.1093/comjnl/bxl033.
 
-    def __init__(self, ruleset: RuleSet):
-        self.sets = sorted(ruleset.sets)
-        self.repeats = ruleset.repeats
+    Adapted to work with different Rummikub rule sets, including having
+    a different number of possible jokers from repeated number tiles within
+    the same colour.
 
-        # array of tile 'names', each tile is really index + 1
-        self.tiles = np.array(ruleset.tiles, dtype=np.uint16)
-        # values for each tile number
-        value = np.tile(
-            np.arange(ruleset.numbers, dtype=np.uint16) + 1, ruleset.colours
-        )
-        if ruleset.joker is not None:
-            # add 0 value for the joker
-            value = np.append(value, 0)
-        self.value = value
+    Creates cvxpy solvers *once*, then reuses their parameters to
+    improve efficiency.
 
+    """
+
+    def __init__(self, ruleset: RuleSet) -> None:
         # matrix of booleans; is a given tile a member of the given set
         # each column is a set, each row a tile
-        self.sets_matrix = np.array(
-            [[t in set for set in self.sets] for t in ruleset.tiles],
+        smatrix = np.array(
+            [[t in set for set in ruleset.sets] for t in ruleset.tiles],
             dtype=np.bool,
         )
-        self.reset()
 
-    def reset(self):
-        self.table, self.rack, self.initial = [], [], True
-        # how many of each tile are placed on the table or player rack?
-        self.table_array = np.zeros(self.tiles.shape, dtype=np.uint8)
-        self.rack_array = np.zeros(self.tiles.shape, dtype=np.uint8)
+        # Input parameters: counts for each tile on the table and on the rack
+        table = self.table = cp.Parameter(ruleset.tile_count, "table", nonneg=True)
+        rack = self.rack = cp.Parameter(ruleset.tile_count, "rack", nonneg=True)
 
-    def add_rack(self, additions):
-        self.rack = sorted([*self.rack, *additions])
-        self.rack_array[[t - 1 for t in additions]] += 1
+        # Output variables: counts per resulting set, and counts per
+        # tile taken from the rack to be added to the table.
+        sets = self.sets = cp.Variable(len(ruleset.sets), "sets", integer=True)
+        tiles = self.tiles = cp.Variable(ruleset.tile_count, "tiles", integer=True)
 
-    def remove_rack(self, removals):
-        rack, rack_array = self.rack, self.rack_array
-        for t in removals:
-            try:
-                rack.remove(t)
-                rack_array[t - 1] -= 1
-            except ValueError:
-                print(f"{t} not on rack")
-
-    def add_table(self, additions):
-        self.table = sorted([*self.table, *additions])
-        self.table_array[[t - 1 for t in additions]] += 1
-
-    def remove_table(self, removals):
-        for t in removals:
-            try:
-                self.table.remove(t)
-                self.table_array[t - 1] -= 1
-            except ValueError:
-                print(f"{t} not on table")
-
-    def solve(self, maximise="tiles", initial_meld=None):
-        if initial_meld is None:
-            initial_meld = self.initial
-        if initial_meld:
-            maximise = "value"
-
-        table = self.table_array
-        if initial_meld:
-            table = np.zeros_like(table)
-
-        rack = self.rack_array
-        value = self.value
-
-        smatrix = self.sets_matrix
-        ntiles, nsets = smatrix.shape
-        vsets = cp.Variable(nsets, integer=True)
-        vtiles = cp.Variable(ntiles, integer=True)
-
-        target = vtiles
-        if maximise == "value":
-            target = value @ target
-        objective = cp.Maximize(cp.sum(target))
+        # Constraints for the optimisation problem
+        numbertiles = tiles
+        joker_constraints = []
+        if ruleset.jokers and ruleset.jokers != ruleset.repeats:
+            # Don't include the joker in the repeated tile constraints
+            numbertiles = tiles[:-1]
+            jokers = tiles[-1]
+            joker_constraints = [
+                # You can place multiple jokers from your rack, but there are
+                # never more than *ruleset.jokers* of them.
+                0 <= jokers,
+                jokers <= ruleset.jokers,
+            ]
 
         constraints = [
-            # sets can only be taken from available and selected tiles
-            smatrix @ vsets == table + vtiles,
+            # placed sets can only be taken from tiles on the table and
+            # the rack.
+            smatrix @ sets == table + tiles,
             # the selected tiles must all come from the rack
-            vtiles <= rack,
-            # sets can be repeated between 0 and max repeats times
-            -vsets <= 0,
-            vsets <= self.repeats,
-            # tiles can be repeated between 0 and max repeats times
-            -vtiles <= 0,
-            vtiles <= self.repeats,
-            # TODO: Add separate constraints for jokers!
+            tiles <= rack,
+            # A given set could appear multiple times, but never more than
+            # *repeats* times.
+            0 <= sets,
+            sets <= ruleset.repeats,
+            # You can place multiple tiles with the same colour and number
+            # but there are never more than *ruleset.repeats* of them.
+            0 <= numbertiles,
+            numbertiles <= ruleset.repeats,
+            *joker_constraints,
         ]
 
-        prob = cp.Problem(objective, constraints)
-        return prob.solve(solver=cp.GLPK_MI), vtiles.value, vsets.value
+        p: dict[SolverMode, cp.Problem] = {}
+        # Problem solver maximising number of tiles placed
+        p[SolverMode.TILE_COUNT] = cp.Problem(cp.Maximize(cp.sum(tiles)), constraints)
+
+        # Problem solver maximising the total value of tiles placed
+        tilevalue = np.tile(
+            np.arange(ruleset.numbers, dtype=np.uint16) + 1, ruleset.colours
+        )
+        if ruleset.jokers:
+            # TODO: add joker penalty value to ruleset and separate out
+            # initial phase joker scoring from penalty score case and
+            # use the penallty score here.
+            tilevalue = np.append(tilevalue, 0)
+        p[SolverMode.TOTAL_VALUE] = cp.Problem(
+            cp.Maximize(cp.sum(tiles @ tilevalue)), constraints
+        )
+        self._problems = p
+
+    def __call__(self, mode: SolverMode, state: GameState) -> SolverSolution:
+        """Find a solution for the given game state
+
+        Uses the appropriate objective for the given solver mode, and takes
+        the rack tile count and table tile count from state.
+
+        """
+
+        # set parameters
+        self.rack.value = state.rack_array
+        if mode is SolverMode.INITIAL:
+            # can't use tiles on the table, set all counts to 0
+            self.table.value = np.zeros_like(state.table_array)
+            # We need to reach a minimum score, so use the total value
+            # goal.
+            # TODO: use dedicated solver with scores for jokers
+            prob = self._problems[SolverMode.TOTAL_VALUE]
+        else:
+            self.table.value = state.table_array
+            prob = self._problems[mode]
+
+        value = int(prob.solve(solver=cp.GLPK_MI))
+
+        # convert index counts to repeated indices, as Python scalars
+        tiles = self.tiles.value
+        (tidx,) = tiles.nonzero()
+        # add 1 to the indices to get tile numbers
+        selected_tiles = np.repeat(tidx + 1, tiles[tidx].astype(int)).tolist()
+
+        sets = self.sets.value
+        (sidx,) = sets.nonzero()
+        selected_sets = np.repeat(sidx, sets[sidx].astype(int)).tolist()
+
+        return SolverSolution(value, selected_tiles, selected_sets)

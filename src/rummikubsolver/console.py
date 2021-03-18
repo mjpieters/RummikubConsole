@@ -14,7 +14,7 @@ from appdirs import user_data_dir
 
 from . import __version__
 from .ruleset import RuleSet
-from .solver import RummikubSolver
+from .gamestate import GameState
 from .types import Colours, SolverMode
 
 try:
@@ -68,18 +68,18 @@ class TileSource(Enum):
         return completer
 
     def available(self, console: SolverConsole) -> Counter[int]:
-        solver = console.solver
+        game = console.game
         if self is TileSource.RACK:
-            return Counter(solver.rack)
+            return game.rack
         elif self is TileSource.TABLE:
-            return Counter(solver.table)
+            return game.table
         # NOT_PLAYED
         ruleset = console._ruleset
         repeats, jokers = ruleset.repeats, ruleset.jokers
         counts = Counter({t: repeats for t in ruleset.tiles})
         if jokers and jokers != repeats:
             counts[console._tile_map[JOKER]] = jokers
-        counts -= Counter(chain(solver.table, solver.rack))
+        counts -= game.table + game.rack
         return counts
 
     def parse_tiles(self, console: SolverConsole, arg: str) -> Sequence[int]:
@@ -142,7 +142,6 @@ class SolverConsole(Cmd):
         super().__init__(*args, **kwargs)
         self._shelve_path = SAVEPATH / f"games_{ruleset.game_state_key}"
         self._tile_map, self._r_tile_map = ruleset.create_number_maps()
-        self._new_game = partial(RummikubSolver, ruleset)
         self._ruleset = ruleset
 
     if not has_readline:
@@ -192,18 +191,18 @@ class SolverConsole(Cmd):
                 pass
 
     @property
-    def _games(self) -> dict[str, RummikubSolver]:
+    def _games(self) -> dict[str, GameState]:
         if self._shelve is None:
             self._shelve_path.parent.mkdir(parents=True, exist_ok=True)
             self._shelve = shelve.open(str(self._shelve_path), writeback=True)
 
             if not len(self._shelve):
-                self._shelve[DEFAULT_NAME] = self._new_game()
+                self._shelve[DEFAULT_NAME] = self._ruleset.new_game()
                 self._current_game = DEFAULT_NAME
 
             self._update_prompt()
 
-        return cast(dict[str, RummikubSolver], self._shelve)
+        return cast(dict[str, GameState], self._shelve)
 
     @property
     def _current_game(self) -> str:
@@ -216,7 +215,7 @@ class SolverConsole(Cmd):
 
     def _update_prompt(self) -> None:
         current = click.style(self._current_game, fg="bright_white")
-        state = GAME_CLOSED if self.solver.initial else GAME_OPEN
+        state = GAME_CLOSED if self.game.initial else GAME_OPEN
         self.prompt = f"(rssolver) [{current} {state}] "
 
     def postcmd(self, stop: bool, line: str) -> bool:
@@ -225,7 +224,7 @@ class SolverConsole(Cmd):
         return stop
 
     @property
-    def solver(self) -> RummikubSolver:
+    def game(self) -> GameState:
         return self._games[self._current_game]
 
     def message(self, *msg: object) -> None:
@@ -265,7 +264,7 @@ class SolverConsole(Cmd):
                     break
                 count += 1
 
-        self._games[name] = self._new_game()
+        self._games[name] = self._ruleset.new_game()
         self._current_game = name
         self.message(f"New game {name!r} is now the current game")
 
@@ -320,7 +319,7 @@ class SolverConsole(Cmd):
         self.message(f"Deleted {name!r}")
         if switch_to:
             if switch_to not in self._games:
-                self._games[switch_to] = self._new_game()
+                self._games[switch_to] = self._ruleset.new_game()
             self._current_game = switch_to
             self.message(f"Current game is now {switch_to!r}")
 
@@ -367,13 +366,13 @@ class SolverConsole(Cmd):
         if not self.confirm(f"Clear {arg or 'the game'}?"):
             return
 
-        solver = self.solver
+        game = self.game
         if arg in {"", "table"}:
             # pass in a copy, to avoid modifying the same list in-place
-            solver.remove_table(list(solver.table))
+            game.remove_table(game.table.elements())
         if arg in {"", "rack"}:
             # pass in a copy, to avoid modifying the same list in-place
-            solver.remove_rack(list(solver.rack))
+            game.remove_rack(game.rack.elements())
 
     complete_clear = _fixed_completer("table", "rack")
 
@@ -387,8 +386,7 @@ class SolverConsole(Cmd):
         if not self.confirm("Reset the game and start over?"):
             return
 
-        solver = self.solver
-        solver.reset()
+        self.game.reset()
 
     def do_initial(self, arg: str) -> None:
         """initial [clear | set]
@@ -403,17 +401,17 @@ class SolverConsole(Cmd):
         if arg not in {"", "clear", "set"}:
             self.error(f"Invalid syntax, unknown argument {arg!r} for initial")
 
-        solver = self.solver
+        game = self.game
         if not arg:
-            solver.initial = not solver.initial
+            game.initial = not game.initial
             self.message(
-                "Toggled initial state, now", "set" if solver.initial else "cleared"
+                "Toggled initial state, now", "set" if game.initial else "cleared"
             )
-        elif arg == "clear" and solver.initial:
-            solver.initial = False
+        elif arg == "clear" and game.initial:
+            game.initial = False
             self.message("Cleared initial state")
-        elif arg == "set" and not solver.initial:
-            solver.initial = True
+        elif arg == "set" and not game.initial:
+            game.initial = True
             self.message("Set initial state")
         self._update_prompt()
 
@@ -423,7 +421,7 @@ class SolverConsole(Cmd):
         """rack | r
         Print the tiles on your rack
         """
-        tiles = [self._r_tile_map[t] for t in self.solver.rack]
+        tiles = [self._r_tile_map[t] for t in self.game.sorted_rack]
         self.message("Your rack:")
         self.message(_tile_display(tiles))
         counts = Counter(t[0] for t in tiles)
@@ -439,7 +437,7 @@ class SolverConsole(Cmd):
         """table | t
         Print the tiles on the table
         """
-        tiles = [self._r_tile_map[t] for t in self.solver.table]
+        tiles = [self._r_tile_map[t] for t in self.game.sorted_table]
         self.message("On the table:")
         self.message(_tile_display(tiles))
         counts = Counter(t[0] for t in tiles)
@@ -457,7 +455,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.NOT_PLAYED.parse_tiles(self, arg)
         if tiles:
-            self.solver.add_rack(tiles)
+            self.game.add_rack(tiles)
             self.message("Added tiles to your rack")
 
     do_ar = do_addrack
@@ -470,7 +468,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.RACK.parse_tiles(self, arg)
         if tiles:
-            self.solver.remove_rack(tiles)
+            self.game.remove_rack(tiles)
             self.message("Removed tiles from rack")
 
     do_rr = do_removerack
@@ -483,7 +481,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.NOT_PLAYED.parse_tiles(self, arg)
         if tiles:
-            self.solver.add_table(tiles)
+            self.game.add_table(tiles)
             self.message("Added tiles to the table")
 
     do_at = do_addtable
@@ -496,7 +494,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.TABLE.parse_tiles(self, arg)
         if tiles:
-            self.solver.remove_table(tiles)
+            self.game.remove_table(tiles)
             self.message("Removed tiles from the table")
 
     do_rt = do_removetable
@@ -509,8 +507,8 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.RACK.parse_tiles(self, arg)
         if tiles:
-            self.solver.remove_rack(tiles)
-            self.solver.add_table(tiles)
+            self.game.remove_rack(tiles)
+            self.game.add_table(tiles)
             self.message("Placed tiles from your rack onto the table")
 
     do_r2t = do_place
@@ -523,8 +521,8 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.TABLE.parse_tiles(self, arg)
         if tiles:
-            self.solver.remove_table(tiles)
-            self.solver.add_rack(tiles)
+            self.game.remove_table(tiles)
+            self.game.add_rack(tiles)
             self.message("Taken tiles from the table and placed on your rack")
 
     do_t2r = do_remove
@@ -543,104 +541,35 @@ class SolverConsole(Cmd):
         default is to maximise the number of tiles placed.
 
         """
-        if not arg:
-            arg = "tiles"
-        if arg not in {"tiles", "value", "initial"}:
+        if arg not in {"", "tiles", "value", "initial"}:
             self.error("Not a valid argument:", arg)
             return
-        initial_meld = True if arg == "initial" else self.solver.initial
-        maximise = "tiles" if arg == "tiles" and not initial_meld else "value"
-        tiles, sets = self._solve(maximise=maximise, initial_meld=initial_meld)
-        if not tiles:
+        mode = None if not arg else SolverMode(arg)
+
+        game = self.game
+        sol = self._ruleset.solve(game, mode)
+        if not sol.tiles:
             self.message("No solution found - pick up a tile.")
             return
 
         self.message("Using the following tiles from your rack:")
-        self.message(_tile_display(self._r_tile_map[t] for t in tiles))
+        self.message(_tile_display(self._r_tile_map[t] for t in sol.tiles))
         self.message("Make the following sets:")
-        for s in sets:
+        for s in sol.sets:
             self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
 
         if self.confirm(
             "Automatically place tiles for selected solution?", default=True
         ):
-            solver = self.solver
-            solver.remove_rack(tiles)
-            solver.add_table(tiles)
-            if solver.initial:
-                solver.initial = False
+            game.remove_rack(sol.tiles)
+            game.add_table(sol.tiles)
+            if game.initial:
+                game.initial = False
                 self._update_prompt()
 
             self.message("Placed tiles on table")
 
     complete_solve = _fixed_completer("tiles", "value", "initial")
-
-    def _solve(
-        self, maximise: str = "tiles", initial_meld: Optional[bool] = None
-    ) -> tuple[Sequence[int], Sequence[tuple[int, ...]]]:
-        solver = self.solver
-        if initial_meld is None:
-            initial_meld = solver.initial
-        if initial_meld:
-            maximise = "value"
-
-        value, tiles, sets = solver.solve(maximise=maximise, initial_meld=initial_meld)
-        tile_list = [
-            solver.tiles[i] for i, t in enumerate(tiles) for _ in range(int(t))
-        ]
-        set_list = [solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))]
-
-        if initial_meld and self._ruleset.jokers and self._tile_map[JOKER] in tile_list:
-            # at least one joker in the set; its replacement value is not included
-            # when scoring for the initial setup.
-            j = self._tile_map[JOKER]
-            n = self._ruleset.numbers
-            for set in set_list:
-                if j not in set:
-                    continue
-                values = [((t - 1) % n) + 1 for t in set if t != j]
-                if all(v == values[0] for v in values):
-                    # same value, different colours. The joker has the same value
-                    # e.g. blue 10, red 10 and a joker => 10
-                    value += values[0]
-                else:
-                    # tiles of the same colour, ranked, find missing tile or
-                    # use max + 1 (unless that falls outside the number range,
-                    # then use n - 2)
-                    # e.g. black 10, black 11, joker, black 13 => 12
-                    #      joker, black 12, black 13 => 11
-                    #      black 8, black 9, joker => 10
-                    missing = values[-1] + 1 if values[-1] != n else n - 2
-                    for expected, actual in enumerate(values, start=values[0]):
-                        if expected != actual:
-                            missing = expected
-                            break
-                    value += missing
-
-        if not tile_list or (initial_meld and value < self._ruleset.min_initial_value):
-            return (), ()
-
-        if initial_meld and solver.table:
-            # Run the solver again to see if more tiles can be placed after the
-            # initial opening run. Temporarily move the opening tiles to the
-            # table for this, to be returned to the rack after running this step;
-            # the two sets of tile moves are then combined and onlyl the second
-            # table solution is shown as the outcome.
-            solver.remove_rack(tile_list)
-            solver.add_table(tile_list)
-            _, tiles, sets = solver.solve(maximise=maximise, initial_meld=False)
-            additional_tiles = [
-                solver.tiles[i] for i, t in enumerate(tiles) for _ in range(int(t))
-            ]
-            if additional_tiles:
-                tile_list += additional_tiles
-                set_list = [
-                    solver.sets[i] for i, s in enumerate(sets) for _ in range(int(s))
-                ]
-            solver.remove_table(tile_list)
-            solver.add_rack(tile_list)
-
-        return tile_list, set_list
 
     def do_stop(self, arg: str) -> bool:
         """stop | end | quit

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Optional, TYPE_CHECKING
+from typing import NamedTuple, Optional, Sequence, TYPE_CHECKING
 
 import click
 
@@ -48,3 +48,25 @@ class Colours(Enum):
         if lidx <= 0:
             return name.title()
         return name[:lidx] + name[lidx].upper() + name[lidx + 1 :]
+
+
+class ProposedSolution(NamedTuple):
+    """Proposed next move to make for a given game state"""
+
+    tiles: Sequence[int]
+    sets: Sequence[tuple[int]]
+
+
+class SolverMode(Enum):
+    INITIAL = "initial"
+    TILE_COUNT = "tiles"
+    TOTAL_VALUE = "value"
+
+
+class SolverSolution(NamedTuple):
+    # When optimising for tile count, score is the number of tiles placed
+    # otherwise, it is the total value of the placed tiles.
+    score: int
+    tiles: Sequence[int]
+    # indices into the ruleset sets list
+    set_indices: Sequence[int]

@@ -2,10 +2,14 @@ from functools import cached_property
 from itertools import chain, combinations, islice, product
 from typing import Iterable, Optional, Sequence
 
-from .types import Colours
+from .gamestate import GameState
+from .solver import RummikubSolver
+from .types import Colours, ProposedSolution, SolverMode
 
 
 class RuleSet:
+    """Manages all aspects of a specific set of Rummikub rules"""
+
     def __init__(
         self,
         numbers: int = 13,
@@ -27,6 +31,47 @@ class RuleSet:
         if jokers:
             self.tile_count += 1
             self.joker = self.tile_count
+
+        self._solver = RummikubSolver(self)
+
+    def new_game(self) -> GameState:
+        """Create a new game state for this ruleset"""
+        return GameState(self.tile_count)
+
+    def solve(
+        self, state: GameState, mode: Optional[SolverMode] = None
+    ) -> Optional[ProposedSolution]:
+        """Find the best option for placing tiles from the rack
+
+        If no mode is selected, uses the game initial state flag
+        to switch between initial and tile-count modes.
+
+        When in initial mode, if there are tiles on the table already,
+        adds an extra round of solving if the minimal point threshold has
+        been met, to find additional tiles that can be moved onto the
+        table in the same turn.
+
+        Returns None if you can't move tiles from the rack to the table.
+
+        """
+        if mode is None:
+            mode = SolverMode.INITIAL if state.initial else SolverMode.TILE_COUNT
+
+        sol, minv = self._solver(mode, state), self.min_initial_value
+        if not sol.tiles or (mode is SolverMode.INITIAL and sol.score < minv):
+            return None
+
+        tiles = sol.tiles
+        set_indices = sol.set_indices
+
+        if SolverMode.INITIAL:
+            new_state = state.with_move(sol.tiles)
+            stage2 = self._solver(SolverMode.TILE_COUNT, new_state)
+            if stage2 is not None:
+                tiles = sorted(tiles + stage2.tiles)
+                set_indices = stage2.set_indices
+
+        return ProposedSolution(tiles, [self.sets[i] for i in set_indices])
 
     @cached_property
     def game_state_key(self) -> str:
@@ -52,8 +97,8 @@ class RuleSet:
         return list(range(1, self.tile_count + 1))
 
     @cached_property
-    def sets(self) -> set[tuple[int]]:
-        return {()} | self.runs | self.groups
+    def sets(self) -> Sequence[tuple[int]]:
+        return sorted(self._runs() | self._groups())
 
     def _runs(self) -> set[tuple[int]]:
         colours, ns = range(self.colours), self.numbers
