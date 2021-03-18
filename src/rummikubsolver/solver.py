@@ -116,6 +116,8 @@ class RummikubSolver:
             prob = self._problems[mode]
 
         value = int(prob.solve(solver=cp.GLPK_MI))
+        if prob.status != cp.OPTIMAL:
+            return SolverSolution(0, (), ())
 
         # convert index counts to repeated indices, as Python scalars
         tiles = self.tiles.value
