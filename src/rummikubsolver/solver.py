@@ -6,10 +6,11 @@ from .ruleset import RuleSet
 
 class RummikubSolver:
 
+    initial: bool = True  # initial game state, not on the table yet
+
     def __init__(self, ruleset: RuleSet):
         self.sets = sorted(ruleset.sets)
         self.repeats = ruleset.repeats
-        self.table, self.rack = [], []
 
         # array of tile 'names', each tile is really index + 1
         self.tiles = np.array(ruleset.tiles, dtype=np.uint16)
@@ -28,7 +29,10 @@ class RummikubSolver:
             [[t in set for set in self.sets] for t in ruleset.tiles],
             dtype=np.bool,
         )
+        self.reset()
 
+    def reset(self):
+        self.table, self.rack, self.initial = [], [], True
         # how many of each tile are placed on the table or player rack?
         self.table_array = np.zeros(self.tiles.shape, dtype=np.uint8)
         self.rack_array = np.zeros(self.tiles.shape, dtype=np.uint8)

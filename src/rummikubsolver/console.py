@@ -86,6 +86,8 @@ class Colours(Enum):
 JOKER = Colours.joker.value
 CURRENT = "__current_game__"
 DEFAULT_NAME = "default"
+GAME_CLOSED = click.style("\N{BALLOT BOX WITH X}", fg="bright_red")
+GAME_OPEN = click.style("\N{BALLOT BOX WITH CHECK}", fg="bright_green")
 
 
 class TileSource(Enum):
@@ -248,8 +250,7 @@ class SolverConsole(Cmd):
                 self._shelve[DEFAULT_NAME] = self._new_game()
                 self._current_game = DEFAULT_NAME
 
-            # after loading, make sure the prompt is correctly set.
-            self._current_game = self._current_game
+            self._update_prompt()
 
         return cast(dict[str, RummikubSolver], self._shelve)
 
@@ -260,7 +261,12 @@ class SolverConsole(Cmd):
     @_current_game.setter
     def _current_game(self, name: str) -> None:
         self._shelve[CURRENT] = name  # type: ignore
-        self.prompt = f"(rssolver) [{click.style(name, fg='bright_white')}] "
+        self._update_prompt()
+
+    def _update_prompt(self) -> None:
+        current = click.style(self._current_game, fg="bright_white")
+        state = GAME_CLOSED if self.solver.initial else GAME_OPEN
+        self.prompt = f"(rssolver) [{current} {state}] "
 
     def postcmd(self, stop: bool, line: str) -> bool:
         if self._shelve is not None:
@@ -420,6 +426,48 @@ class SolverConsole(Cmd):
 
     complete_clear = _fixed_completer("table", "rack")
 
+    def do_reset(self, arg: str) -> None:
+        """reset
+        Reset the game. Clears the table and rack and resets you to the initial
+        state (requiring an initial placement before you can use tiles on the
+        table again).
+
+        """
+        if not self.confirm("Reset the game and start over?"):
+            return
+
+        solver = self.solver
+        solver.reset()
+
+    def do_initial(self, arg: str) -> None:
+        """initial [clear | set]
+        Set your initial state, wether or not you managed to place the required
+        minimal points on the table from your own rack.
+
+        Without an argument it toggles between the states, while 'clear' means
+        you have met the requirement and can place tiles arbitrarily, and 'set'
+        will mark you as being in the initial phase still.
+
+        """
+        if arg not in {"", "clear", "set"}:
+            self.error(f"Invalid syntax, unknown argument {arg!r} for initial")
+
+        solver = self.solver
+        if not arg:
+            solver.initial = not solver.initial
+            self.message(
+                "Toggled initial state, now", "set" if solver.initial else "cleared"
+            )
+        elif arg == "clear" and solver.initial:
+            solver.initial = False
+            self.message("Cleared initial state")
+        elif arg == "set" and not solver.initial:
+            solver.initial = True
+            self.message("Set initial state")
+        self._update_prompt()
+
+    complete_initial = _fixed_completer("clear", "set")
+
     def do_rack(self, arg: str) -> None:
         """rack | r
         Print the tiles on your rack
@@ -539,15 +587,18 @@ class SolverConsole(Cmd):
         You can either maximize for number of tiles placed, the maximum value
         placed, or you can try to place your initial tiles.
 
-        The default action is to try to maximise the number of tiles placed.
+        If the game is still closed (you haven't yet placed your initial tiles),
+        the default action is to solve for initial placement, otherwise the
+        default is to maximise the number of tiles placed.
+
         """
         if not arg:
             arg = "tiles"
         if arg not in {"tiles", "value", "initial"}:
             self.error("Not a valid argument:", arg)
             return
-        initial_meld = arg == "initial"
-        maximise = "tiles" if arg == "tiles" else "value"
+        initial_meld = True if arg == "initial" else self.solver.initial
+        maximise = "tiles" if arg == "tiles" and not initial_meld else "value"
         tiles, sets = self._solve(maximise=maximise, initial_meld=initial_meld)
         if not tiles:
             self.message("No solution found - pick up a tile.")
@@ -562,16 +613,26 @@ class SolverConsole(Cmd):
         if self.confirm(
             "Automatically place tiles for selected solution?", default=True
         ):
-            self.solver.remove_rack(tiles)
-            self.solver.add_table(tiles)
+            solver = self.solver
+            solver.remove_rack(tiles)
+            solver.add_table(tiles)
+            if solver.initial:
+                solver.initial = False
+                self._update_prompt()
+
             self.message("Placed tiles on table")
 
     complete_solve = _fixed_completer("tiles", "value", "initial")
 
     def _solve(
-        self, maximise: str = "tiles", initial_meld: bool = False
+        self, maximise: str = "tiles", initial_meld: Optional[bool] = None
     ) -> tuple[Sequence[int], Sequence[tuple[int, ...]]]:
         solver = self.solver
+        if initial_meld is None:
+            initial_meld = solver.initial
+        if initial_meld:
+            maximise = "value"
+
         value, tiles, sets = solver.solve(maximise=maximise, initial_meld=initial_meld)
         tile_list = [
             solver.tiles[i] for i, t in enumerate(tiles) for _ in range(int(t))
