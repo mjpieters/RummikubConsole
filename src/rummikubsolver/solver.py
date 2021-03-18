@@ -115,9 +115,9 @@ class RummikubSolver:
             self.table.value = state.table_array
             prob = self._problems[mode]
 
+        value = prob.solve(solver=cp.GLPK_MI)
         if prob.status != cp.OPTIMAL:
             return SolverSolution(0, (), ())
-        value = int(prob.solve(solver=cp.GLPK_MI))
 
         # convert index counts to repeated indices, as Python scalars
         tiles = self.tiles.value
@@ -129,4 +129,4 @@ class RummikubSolver:
         (sidx,) = sets.nonzero()
         selected_sets = np.repeat(sidx, sets[sidx].astype(int)).tolist()
 
-        return SolverSolution(value, selected_tiles, selected_sets)
+        return SolverSolution(int(value), selected_tiles, selected_sets)
