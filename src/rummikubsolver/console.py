@@ -141,7 +141,7 @@ class SolverConsole(Cmd):
     def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._shelve_path = SAVEPATH / f"games_{ruleset.game_state_key}"
-        self._tile_map, self._r_tile_map = ruleset.create_number_maps()
+        self._tile_map, self._r_tile_map = ruleset.create_tile_maps()
         self._ruleset = ruleset
 
     if not has_readline:
