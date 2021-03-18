@@ -75,6 +75,7 @@ class GameState:
         np.add.at(self.rack_array, np.array(additions) - 1, 1)
 
     def remove_rack(self, removals: Iterable[int]) -> None:
+        removals = tuple(removals)
         self.rack -= Counter(removals)
         rack = self.rack_array
         np.subtract.at(rack, np.array(removals) - 1, 1)
@@ -85,6 +86,7 @@ class GameState:
         np.add.at(self.table_array, [t - 1 for t in additions], 1)
 
     def remove_table(self, removals: Iterable[int]) -> None:
+        removals = tuple(removals)
         self.table -= Counter(removals)
         table = self.table_array
         np.subtract.at(table, [t - 1 for t in removals], 1)
