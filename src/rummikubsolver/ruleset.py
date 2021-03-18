@@ -64,7 +64,7 @@ class RuleSet:
         tiles = sol.tiles
         set_indices = sol.set_indices
 
-        if SolverMode.INITIAL:
+        if mode is SolverMode.INITIAL:
             new_state = state.with_move(sol.tiles)
             stage2 = self._solver(SolverMode.TILE_COUNT, new_state)
             if stage2 is not None:
