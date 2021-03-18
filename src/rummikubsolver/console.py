@@ -369,10 +369,10 @@ class SolverConsole(Cmd):
         game = self.game
         if arg in {"", "table"}:
             # pass in a copy, to avoid modifying the same list in-place
-            game.remove_table(game.table.elements())
+            game.remove_table(game.sorted_table)
         if arg in {"", "rack"}:
             # pass in a copy, to avoid modifying the same list in-place
-            game.remove_rack(game.rack.elements())
+            game.remove_rack(game.sorted_rack)
 
     complete_clear = _fixed_completer("table", "rack")
 
