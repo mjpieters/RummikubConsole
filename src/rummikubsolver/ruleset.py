@@ -165,7 +165,7 @@ class RuleSet:
         # for sets of minimum length: combine with jokers; any combination of
         # tokens in the original series replaced by any number of possible
         # jokers. Do not generate further combinations for longer sets, as
-        # these are essentially free for the next player to take.
+        # these would leave jokers free for the next player to take.
         js = [j] * self.jokers
         comb = (
             combinations([*s, *js], len(s)) if len(s) == mlen else [tuple(s)]
