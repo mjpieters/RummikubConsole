@@ -1,6 +1,6 @@
-# Rummikub Solver
+# Rummikub Console
 
-Rummikub solver coded in Python that uses integer linear programming to maximise the number or value of tiles placed in the popular board game.
+A Rummikub solver console supporting multiple games and persistence, written in Python. 
 
 The algorithm used builds on the approach described by D. Den Hertog, P. B. Hulshof (2006), "Solving Rummikub Problems by Integer Linear Programming", *The Computer Journal, 49(6)*, 665-669 ([DOI 10.1093/comjnl/bxl033](https://doi.org/10.1093/comjnl/bxl033)).
 
