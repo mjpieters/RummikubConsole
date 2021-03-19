@@ -94,9 +94,6 @@ class RummikubSolver:
             np.arange(ruleset.numbers, dtype=np.uint16) + 1, ruleset.colours
         )
         if ruleset.jokers:
-            # TODO: add joker penalty value to ruleset and separate out
-            # initial phase joker scoring from penalty score case and
-            # use the penallty score here.
             tilevalue = np.append(tilevalue, 0)
         p[SolverMode.TOTAL_VALUE] = cp.Problem(
             cp.Maximize(cp.sum(tiles @ tilevalue)), constraints
