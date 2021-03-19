@@ -5,3 +5,4 @@ __pycache__
 .eggs/
 Pipfile.lock
 *.egg-info/
+build/
