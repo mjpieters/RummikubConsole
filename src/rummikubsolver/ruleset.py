@@ -65,9 +65,9 @@ class RuleSet:
         tiles = sol.tiles
         set_indices = sol.set_indices
 
-        if mode is SolverMode.INITIAL:
-            # placed initial tiles, can now use rest of rack and table to look
-            # for additional tiles to place.
+        if mode is SolverMode.INITIAL and state.table:
+            # placed initial tiles, can now use rest of rack and what is
+            # available on the table to look for additional tiles to place.
             new_state = state.with_move(sol.tiles)
             stage2 = self._solver(SolverMode.TILE_COUNT, new_state)
             if stage2 is not None:
