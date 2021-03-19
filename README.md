@@ -46,14 +46,14 @@ When running locally, install [Pipenv], then run:
 
 ```bash
 pipenv install
-pipenv run rcsolver
+pipenv run rsconsole
 ```
 
 to run the console solver.
 
 ## Usage
 
-Run the `rcsolver` command-line tool to open the console, or run `rcsolver --help` to see how you can adjust the Rummikub rules (you can adjust tile count, colours, joker count, the minimum number of tiles to make a set and the minimum score for the initial placement).
+Run the `rsconsole` command-line tool to open the console, or run `rsconsole --help` to see how you can adjust the Rummikub rules (you can adjust tile count, colours, joker count, the minimum number of tiles to make a set and the minimum score for the initial placement).
 
 You then enter the console command loop. Enter `?` or `h` or `help` to list the available commands, and `help <command>` to get help on what each command does.
 
