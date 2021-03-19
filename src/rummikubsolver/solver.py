@@ -58,7 +58,7 @@ class RummikubSolver:
         numbertiles = tiles
         joker_constraints = []
         if ruleset.jokers and ruleset.jokers != ruleset.repeats:
-            # Don't include the joker in the repeated tile constraints
+            # Jokers count is distinct from number tile counts.
             numbertiles = tiles[:-1]
             jokers = tiles[-1]
             joker_constraints = [
