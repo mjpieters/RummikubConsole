@@ -57,14 +57,17 @@ class RuleSet:
         if mode is None:
             mode = SolverMode.INITIAL if state.initial else SolverMode.TILE_COUNT
 
-        sol, minv = self._solver(mode, state), self.min_initial_value
-        if not sol.tiles or (mode is SolverMode.INITIAL and sol.score < minv):
+        sol = self._solver(mode, state)
+        minv = self.min_initial_value if mode is SolverMode.INITIAL else 1
+        if sol.score < minv:
             return None
 
         tiles = sol.tiles
         set_indices = sol.set_indices
 
         if mode is SolverMode.INITIAL:
+            # placed initial tiles, can now use rest of rack and table to look
+            # for additional tiles to place.
             new_state = state.with_move(sol.tiles)
             stage2 = self._solver(SolverMode.TILE_COUNT, new_state)
             if stage2 is not None:

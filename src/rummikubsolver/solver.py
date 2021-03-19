@@ -129,6 +129,7 @@ class RummikubSolver:
             return SolverSolution(0, (), ())
 
         # convert index counts to repeated indices, as Python scalars
+        # similar to what Counts.elements() produces.
         tiles = self.tiles.value
         (tidx,) = tiles.nonzero()
         # add 1 to the indices to get tile numbers
