@@ -70,9 +70,9 @@ class TileSource(Enum):
     def available(self, console: SolverConsole) -> Counter[int]:
         game = console.game
         if self is TileSource.RACK:
-            return game.rack
+            return game.rack.copy()
         elif self is TileSource.TABLE:
-            return game.table
+            return game.table.copy()
         # NOT_PLAYED
         ruleset = console._ruleset
         repeats, jokers = ruleset.repeats, ruleset.jokers
