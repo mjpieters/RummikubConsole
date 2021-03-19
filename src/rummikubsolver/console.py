@@ -360,7 +360,7 @@ class SolverConsole(Cmd):
         """
         if arg not in {"", "table", "rack"}:
             self.error(
-                "Invalid argument for clear, expected 'table' or 'rack', got {arg!r}"
+                f"Invalid argument for clear, expected 'table' or 'rack', got {arg!r}"
             )
             return
         if not self.confirm(f"Clear {arg or 'the game'}?"):
