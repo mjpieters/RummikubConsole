@@ -22,10 +22,10 @@ class RummikubSolver:
 
     Adapted to work with different Rummikub rule sets, including having
     a different number of possible jokers from repeated number tiles within
-    the same colour.
+    the same colour, as well as much better initial tile placement and
+    joker handling in general.
 
-    Creates cvxpy solvers *once*, then reuses their parameters to
-    improve efficiency.
+    Creates cvxpy solvers *once* and use parameters to improve efficiency.
 
     """
 
