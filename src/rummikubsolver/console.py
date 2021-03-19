@@ -194,7 +194,12 @@ class SolverConsole(Cmd):
     def _games(self) -> dict[str, GameState]:
         if self._shelve is None:
             self._shelve_path.parent.mkdir(parents=True, exist_ok=True)
-            self._shelve = shelve.open(str(self._shelve_path), writeback=True)
+            try:
+                self._shelve = shelve.open(str(self._shelve_path), writeback=True)
+            except OSError:
+                click.get_current_context().fail(
+                    "Failed to open storage, can't be opened more than once"
+                )
 
             if not len(self._shelve):
                 self._shelve[DEFAULT_NAME] = self._ruleset.new_game()
