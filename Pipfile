@@ -8,6 +8,7 @@ rummikubconsole = {editable = true, path = "."}
 
 [dev-packages]
 flake8 = "*"
+black = "*"
 
 [requires]
 python_version = "3.9"
