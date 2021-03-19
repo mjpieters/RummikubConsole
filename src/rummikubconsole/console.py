@@ -16,7 +16,7 @@ from appdirs import user_data_dir
 from . import __project__, __author__
 from .ruleset import RuleSet
 from .gamestate import GameState
-from .types import Colours, SolverMode
+from .types import Colours, SolverMode, expand_tileref
 
 try:
     import readline
@@ -82,19 +82,20 @@ class TileSource(Enum):
         counts -= game.table + game.rack
         return counts
 
-    def parse_tiles(self, console: SolverConsole, arg: str) -> Sequence[int]:
+    def parse_tiles(self, console: SolverConsole, args: str) -> Sequence[int]:
         avail = self.available(console)
         tiles = []
-        for tile in arg.split():
-            t = console._tile_map.get(tile)
-            if t is None:
-                console.error("Ignoring invalid tile:", tile)
-                continue
-            if not avail[t]:
-                console.error(f"No {tile} tile available.")
-                continue
-            avail[t] -= 1
-            tiles.append(t)
+        for arg in args.split():
+            for tile in expand_tileref(arg):
+                t = console._tile_map.get(tile)
+                if t is None:
+                    console.error("Ignoring invalid tile:", tile)
+                    continue
+                if not avail[t]:
+                    console.error(f"No {tile} tile available.")
+                    continue
+                avail[t] -= 1
+                tiles.append(t)
         return tiles
 
 
@@ -604,6 +605,16 @@ class SolverConsole(Cmd):
 
             For example, if you picked a black 13, a red 7 and a joker, you can
             add these to your rack with the command "addrack k13 r7 j".
+
+            You can also specify a _run_ or _group_ of tiles:
+
+            - Name a colour and a range of numbers, e.g. k1-5, to specify
+              a series of tiles; this expands to all numbers in between.
+
+            - Name multiple colours and a single number, e.g. kro10, to specify
+              a tile group, this expands to each individual colour for that
+              number.
+
             """
         ).format(tile_list="\n".join([f"- {c.style(c.value)}: {c}" for c in cols]))
         self.message(help_text)

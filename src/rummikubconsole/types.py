@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
+import re
 from enum import Enum
-from typing import NamedTuple, Optional, Sequence, TYPE_CHECKING
+from typing import Iterator, NamedTuple, Optional, Sequence, TYPE_CHECKING
 
 import click
 
@@ -49,6 +50,38 @@ class Colours(Enum):
         if lidx <= 0:
             return name.title()
         return name[:lidx] + name[lidx].upper() + name[lidx + 1 :]
+
+
+TILEREF = re.compile(
+    r"""
+    ^(
+        # run (single colour, multiple numbers)
+        (?P<run>[{c}](?P<start>[1-9][0-9]?)-(?P<end>[1-9][0-9]?))
+    |   # group (multiple colours)
+        (?P<group>(?P<colours>[{c}]{{2,}})(?P<num>[1-9][0-9]?))
+    |   # single tile
+        (?P<tile>[{c}][1-9][0-9]?)
+    )$
+    """.format(
+        c="".join([c.value for c in Colours])
+    ),
+    flags=re.VERBOSE,
+)
+
+
+def expand_tileref(t: str) -> Iterator[str]:
+    if (match := TILEREF.match(t)) :
+        if (tile := match["tile"]) :
+            yield tile
+        elif (run := match["run"]) :
+            for num in range(int(match["start"]), int(match["end"]) + 1):
+                yield f"{run[0]}{num}"
+        elif (group := match["colours"]) :
+            num = match["num"]
+            yield from (f"{g}{num}" for g in group)
+        return
+    # pass through, no validation done.
+    yield t
 
 
 class SolverMode(Enum):
