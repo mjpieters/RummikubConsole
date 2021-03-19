@@ -57,11 +57,44 @@ class TileSource(Enum):
         ) -> Sequence[str]:
             """Complete tile names, but only those that are still available to place"""
             _, *args = (line[:begidx] + line[endidx:]).split()
+            # expand groups and runs first
+            args = chain.from_iterable(expand_tileref(arg) for arg in args)
+            tmap, rmap = console._tile_map, console._r_tile_map
             avail = self.available(console) - Counter(
-                map(console._tile_map.__getitem__, args)
+                tmap[a] for a in args if a in tmap
             )
-            rmap = console._r_tile_map
-            return [
+
+            # if completing a valid tile plus dash, offer all possible
+            # tile numbers that could make it a run
+            if (
+                text[:1] != JOKER
+                and len(parts := text.split("-")) == 2
+                and (t := tmap.get(parts[0])) in avail
+            ):
+                n = console._ruleset.numbers
+                c = (t - 1) // n
+                opts = (
+                    f"{parts[0]}-{rmap[a][1:]}"
+                    for a in avail
+                    if a > t and (a - 1) // n == c
+                )
+                return [opt for opt in opts if opt.startswith(text)]
+
+            # alternative options in addition to the main tile names
+            options = []
+            if tmap.get(text) in avail:
+                # if text is an available tile, offer a dash to create a run
+                options.append(f"{text}-")
+
+            elif all(Colours(t) for t in text):
+                # if text consists entirely of colour letters, offer the other colours
+                # to form a group
+                colours = sorted(
+                    {c for t in avail if (c := rmap[t][0]) not in text and c != JOKER}
+                )
+                options += (f"{text}{c}" for c in colours)
+
+            return options + [
                 n for t, c in avail.items() if c and (n := rmap[t]).startswith(text)
             ]
 
