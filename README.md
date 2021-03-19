@@ -26,6 +26,22 @@ _disregards_ jokers (which means jokers are only used for the opening meld if th
 
 ## Install
 
+You can install this project the usual way:
+
+```sh
+$ pip install RummikubConsole
+```
+
+or use a tool like [pipx][] to help you manage command-line tool installations like these:
+
+```sh
+$ pipx install RummikubConsole 
+```
+
+## Development
+
+The source code for this project can be found [on GitHub][gh].
+
 When running locally, install [Pipenv], then run:
 
 ```bash
@@ -34,10 +50,6 @@ pipenv run rcsolver
 ```
 
 to run the console solver.
-
-## Development
-
-The source code for this project can be found [on GitHub][gh].
 
 ## Usage
 
@@ -51,6 +63,7 @@ The initial version of the solver and console were written by [Ollie Hooper][oh]
 
 This version is a complete rewrite by [Martijn Pieters][mp], with new console implementation, expansion of the solver to improve performance and address shortcomings in the original paper, as well as multi-game, game state tracking and persistence support. 
 
+[pipx]: https://pipxproject.github.io/
 [Pipenv]: https://pipenv.readthedocs.io/
 [gh]: https://github.com/Ollie-Hooper/RummikubSolver
 [oh]: https://github.com/Ollie-Hooper
