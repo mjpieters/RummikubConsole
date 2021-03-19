@@ -37,8 +37,12 @@ JOKER = Colours.joker.value
 BASE_PROMPT = "(rsconsole) "
 CURRENT = "__current_game__"
 DEFAULT_NAME = "default"
-GAME_CLOSED = click.style("\N{BALLOT BOX WITH X}", fg="bright_red")
-GAME_OPEN = click.style("\N{BALLOT BOX WITH CHECK}", fg="bright_green")
+# includes readline non-printable delimiters
+N1, N2 = "\x01\x02"  # start nonprintable, stop nonprintable
+GAME_CLOSED = N1 + click.style(N2 + "\N{BALLOT BOX WITH X}" + N1, fg="bright_red") + N2
+GAME_OPEN = (
+    N1 + click.style(N2 + "\N{BALLOT BOX WITH CHECK}" + N1, fg="bright_green") + N2
+)
 
 
 class TileSource(Enum):
@@ -253,9 +257,11 @@ class SolverConsole(Cmd):
         self._update_prompt()
 
     def _update_prompt(self) -> None:
-        current = click.style(self._current_game, fg="bright_white")
+        # include 0x01 and 0x02 markers for readline, delimiting non-printing
+        # sequences. This ensures readline gets the column offsets correct.
+        current = click.style(f"{N2}{self._current_game}{N1}", fg="bright_white")
         state = GAME_CLOSED if self.game.initial else GAME_OPEN
-        self.prompt = f"(rsconsole) [{current} {state}] "
+        self.prompt = f"{BASE_PROMPT}[{N1}{current}{N2} {state}] "
 
     def postcmd(self, stop: bool, line: str) -> bool:
         if self._shelve is not None:
