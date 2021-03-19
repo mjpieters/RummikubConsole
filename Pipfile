@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-rummikubsolver = {editable = true, path = "."}
+rummikubconsole = {editable = true, path = "."}
 
 [dev-packages]
 flake8 = "*"
