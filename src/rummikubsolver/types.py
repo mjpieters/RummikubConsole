@@ -50,13 +50,6 @@ class Colours(Enum):
         return name[:lidx] + name[lidx].upper() + name[lidx + 1 :]
 
 
-class ProposedSolution(NamedTuple):
-    """Proposed next move to make for a given game state"""
-
-    tiles: Sequence[int]
-    sets: Sequence[tuple[int]]
-
-
 class SolverMode(Enum):
     INITIAL = "initial"
     TILE_COUNT = "tiles"
@@ -64,9 +57,15 @@ class SolverMode(Enum):
 
 
 class SolverSolution(NamedTuple):
-    # When optimising for tile count, score is the number of tiles placed
-    # otherwise, it is the total value of the placed tiles.
-    score: int
+    """Raw solver solution, containing tile values and set indices"""
+
     tiles: Sequence[int]
     # indices into the ruleset sets list
     set_indices: Sequence[int]
+
+
+class ProposedSolution(NamedTuple):
+    """Proposed next move to make for a given game state"""
+
+    tiles: Sequence[int]
+    sets: Sequence[tuple[int]]

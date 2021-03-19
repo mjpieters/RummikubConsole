@@ -133,7 +133,7 @@ class RummikubSolver:
         if np.isinf(value):
             # no solution for the problem (e.g. no combination of tiles on
             # the rack leads to a valid set or has enough points when opening)
-            return SolverSolution(0, (), ())
+            return SolverSolution((), ())
 
         # convert index counts to repeated indices, as Python scalars
         # similar to what Counts.elements() produces.
@@ -146,4 +146,4 @@ class RummikubSolver:
         (sidx,) = sets.nonzero()
         selected_sets = np.repeat(sidx, sets[sidx].astype(int)).tolist()
 
-        return SolverSolution(int(value), selected_tiles, selected_sets)
+        return SolverSolution(selected_tiles, selected_sets)
