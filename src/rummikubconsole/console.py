@@ -13,15 +13,10 @@ from typing import Callable, Iterable, cast, Any, Sequence, TYPE_CHECKING
 import click
 from appdirs import user_data_dir
 
-from . import __version__
+from . import __project__, __author__
 from .ruleset import RuleSet
 from .gamestate import GameState
 from .types import Colours, SolverMode
-
-try:
-    from importlib_metadata import metadata, PackageNotFoundError
-except ImportError:
-    from importlib.metadata import metadata, PackageNotFoundError
 
 try:
     import readline
@@ -35,16 +30,11 @@ if TYPE_CHECKING:
     CompleterMethod = Callable[[Any, str, str, int, int], Sequence[str]]
 
 
-try:
-    info = metadata(__package__)
-    APPNAME, APPAUTHOR = info["name"], info["author"]
-except PackageNotFoundError:
-    APPNAME = __package__
-    APPAUTHOR = "<unknown>"
-SAVEPATH = Path(user_data_dir(APPNAME, APPAUTHOR))
+SAVEPATH = Path(user_data_dir(__project__, __author__))
 
 
 JOKER = Colours.joker.value
+BASE_PROMPT = "(rsconsole)"
 CURRENT = "__current_game__"
 DEFAULT_NAME = "default"
 GAME_CLOSED = click.style("\N{BALLOT BOX WITH X}", fg="bright_red")
@@ -146,7 +136,7 @@ def _tile_display(tiles: Iterable[str]) -> str:
 class SolverConsole(Cmd):
     _shelve = None
     intro = "Welcome to the Rummikub Solver console\n"
-    prompt = "(rssolver) "
+    prompt = "(rsconsole) "
 
     def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -231,7 +221,7 @@ class SolverConsole(Cmd):
     def _update_prompt(self) -> None:
         current = click.style(self._current_game, fg="bright_white")
         state = GAME_CLOSED if self.game.initial else GAME_OPEN
-        self.prompt = f"(rssolver) [{current} {state}] "
+        self.prompt = f"(rsconsole) [{current} {state}] "
 
     def postcmd(self, stop: bool, line: str) -> bool:
         if self._shelve is not None:
@@ -617,81 +607,3 @@ class SolverConsole(Cmd):
             """
         ).format(tile_list="\n".join([f"- {c.style(c.value)}: {c}" for c in cols]))
         self.message(help_text)
-
-
-@click.command(help="Rummikub Solver console")
-@click.option(
-    "--numbers",
-    default=13,
-    show_default=True,
-    type=click.IntRange(1, 26),
-    help="Number of tiles per colour (1 - 26)",
-    metavar="T",
-)
-@click.option(
-    "--repeats",
-    default=2,
-    show_default=True,
-    type=click.IntRange(1, 4),
-    help="Number of repeats per number per colour (1 - 4)",
-    metavar="R",
-)
-@click.option(
-    "--colours",
-    default=4,
-    show_default=True,
-    type=click.IntRange(1, 8),
-    help="Number of colours for the tilesets (1 - 8)",
-    metavar="C",
-)
-@click.option(
-    "--jokers",
-    default=2,
-    show_default=True,
-    type=click.IntRange(0, 4),
-    help="Number of jokers in the game (0 - 4)",
-    metavar="J",
-)
-@click.option(
-    "--min-len",
-    default=3,
-    show_default=True,
-    type=click.IntRange(2, 6),
-    help="Mininum number of tiles in a set (2 - 6)",
-    metavar="M",
-)
-@click.option(
-    "--min-initial-value",
-    default=30,
-    show_default=True,
-    type=click.IntRange(1, 50),
-    help="Minimal tile sum required as opening move",
-)
-@click.version_option(__version__)
-def rcconsole(
-    numbers: int = 13,
-    repeats: int = 2,
-    colours: int = 4,
-    jokers: int = 2,
-    min_len: int = 3,
-    min_initial_value: int = 30,
-):
-    ruleset = RuleSet(
-        numbers=numbers,
-        repeats=repeats,
-        colours=colours,
-        jokers=jokers,
-        min_len=min_len,
-        min_initial_value=min_initial_value,
-    )
-    cmd = SolverConsole(
-        ruleset=ruleset,
-        # be tolerant of input character errors, don't break the console
-        stdin=click.get_text_stream("stdin", errors="replace"),
-        stdout=click.get_text_stream("stdout"),
-    )
-    cmd.cmdloop()
-
-
-if __name__ == "__main__":
-    rcconsole()
