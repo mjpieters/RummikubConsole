@@ -34,7 +34,7 @@ SAVEPATH = Path(user_data_dir(__project__, __author__))
 
 
 JOKER = Colours.joker.value
-BASE_PROMPT = "(rsconsole)"
+BASE_PROMPT = "(rsconsole) "
 CURRENT = "__current_game__"
 DEFAULT_NAME = "default"
 GAME_CLOSED = click.style("\N{BALLOT BOX WITH X}", fg="bright_red")
@@ -170,7 +170,7 @@ def _tile_display(tiles: Iterable[str]) -> str:
 class SolverConsole(Cmd):
     _shelve = None
     intro = "Welcome to the Rummikub Solver console\n"
-    prompt = "(rsconsole) "
+    prompt = BASE_PROMPT
 
     def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
