@@ -387,6 +387,7 @@ class SolverConsole(Cmd):
             return
 
         self.game.reset()
+        self._update_prompt()
 
     def do_initial(self, arg: str) -> None:
         """initial [clear | set]
