@@ -1,12 +1,8 @@
 from __future__ import annotations
 from collections import Counter
-from typing import Iterable, Sequence, TYPE_CHECKING
+from typing import Iterable, Sequence
 
 import numpy as np
-
-
-if TYPE_CHECKING:
-    from .ruleset import RuleSet
 
 
 class GameState:
