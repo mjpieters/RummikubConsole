@@ -105,23 +105,29 @@ class RuleSet:
 
     @cached_property
     def setvalues(self) -> Sequence[int]:
-        n = self.numbers
+        n, mlen = self.numbers, self.min_len
         # generate a runlength value matrix indexed by [len(set)][min(set)],
         # giving total tile value for a given set accounting for jokers. e.g. a
         # 3 tile run with lowest number 12 must have a joker acting as the 11 in
         # (j, 12, 13), and for initial placement the sum of numbers would be 36.
         rlvalues = [[0] * (n + 1)]
-        for i, rl in enumerate(range(1, self.min_len * 2)):
+        for i, rl in enumerate(range(1, mlen * 2)):
             tiles = chain(range(i, n + 1), repeat(n - i))
             rlvalues.append([v + t for v, t in zip(rlvalues[-1], tiles)])
 
         def _calc(s, _next=next, _len=len, joker=self.joker):
-            """ "Calculate sum of numeric value of tiles in set.
+            """Calculate sum of numeric value of tiles in set.
 
             If there are jokers in the set the max possible value for the run or
             group formed is used.
 
             """
+            if _len(s) > mlen and joker in s:
+                # sets with free jokers should never be considered when
+                # placing opening sets; e.g. o10 r10 k10 j gives away the
+                # joker to the next player.
+                return 0
+
             nums = ((t - 1) % n + 1 for t in s if t != joker)
             n0 = _next(nums)
             try:
