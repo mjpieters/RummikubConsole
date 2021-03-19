@@ -1,5 +1,5 @@
 from functools import cached_property
-from itertools import chain, combinations, islice, product
+from itertools import chain, combinations, islice, product, repeat
 from typing import Iterable, Optional, Sequence
 
 from .gamestate import GameState
@@ -102,6 +102,39 @@ class RuleSet:
     @cached_property
     def sets(self) -> Sequence[tuple[int]]:
         return sorted(self._runs() | self._groups())
+
+    @cached_property
+    def setvalues(self) -> Sequence[int]:
+        n = self.numbers
+        # generate a runlength value matrix indexed by [len(set)][min(set)],
+        # giving total tile value for a given set accounting for jokers. e.g. a
+        # 3 tile run with lowest number 12 must have a joker acting as the 11 in
+        # (j, 12, 13), and for initial placement the sum of numbers would be 36.
+        rlvalues = [[0] * (n + 1)]
+        for i, rl in enumerate(range(1, self.min_len * 2)):
+            tiles = chain(range(i, n + 1), repeat(n - i))
+            rlvalues.append([v + t for v, t in zip(rlvalues[-1], tiles)])
+
+        def _calc(s, _next=next, _len=len, joker=self.joker):
+            """ "Calculate sum of numeric value of tiles in set.
+
+            If there are jokers in the set the max possible value for the run or
+            group formed is used.
+
+            """
+            nums = ((t - 1) % n + 1 for t in s if t != joker)
+            n0 = _next(nums)
+            try:
+                # n0 == n1: group of same numbers, else run of same colour
+                return _len(s) * n0 if n0 == _next(nums) else rlvalues[_len(s)][n0]
+            except StopIteration:
+                # len(nums) == 1, rest of set is jokers. Can be both a run or a
+                # group, e.g. (5, j, j): (5, 5, 5) = 15 or (5, 6, 7) = 18, and
+                # (13, j, j): (13, 13, 13) = 39 or (j, j, 13) = 36. Use max to
+                # pick best.
+                return max(_len(s) * n0, rlvalues[_len(s)][n0])
+
+        return [_calc(set) for set in self.sets]
 
     def _runs(self) -> set[tuple[int]]:
         colours, ns = range(self.colours), self.numbers

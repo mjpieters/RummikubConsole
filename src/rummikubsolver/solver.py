@@ -101,6 +101,13 @@ class RummikubSolver:
         p[SolverMode.TOTAL_VALUE] = cp.Problem(
             cp.Maximize(cp.sum(tiles @ tilevalue)), constraints
         )
+
+        # Initial meld scoring is based entirely on the sets formed
+        setvalue = np.array(ruleset.setvalues, dtype=np.uint16)
+        p[SolverMode.INITIAL] = cp.Problem(
+            cp.Maximize(cp.sum(sets @ setvalue)), constraints
+        )
+
         self._problems = p
 
     def __call__(self, mode: SolverMode, state: GameState) -> SolverSolution:
@@ -116,14 +123,10 @@ class RummikubSolver:
         if mode is SolverMode.INITIAL:
             # can't use tiles on the table, set all counts to 0
             self.table.value = np.zeros_like(state.table_array)
-            # We need to reach a minimum score, so use the total value
-            # goal.
-            # TODO: use dedicated solver with scores for jokers
-            prob = self._problems[SolverMode.TOTAL_VALUE]
         else:
             self.table.value = state.table_array
-            prob = self._problems[mode]
 
+        prob = self._problems[mode]
         value = prob.solve(solver=cp.GLPK_MI)
         if np.isinf(value):
             # problem could not be solved (probably due to a bug in handling
