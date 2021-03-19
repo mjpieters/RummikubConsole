@@ -70,10 +70,10 @@ class RummikubSolver:
                 ]
 
         constraints = [
-            # placed sets can only be taken from tiles on the table and
-            # the rack.
+            # placed sets can only be taken from selected rack tiles and what
+            # was already placed on the table.
             smatrix @ sets == table + tiles,
-            # the selected tiles must all come from the rack
+            # the selected tiles must all come from your rack
             tiles <= rack,
             # A given set could appear multiple times, but never more than
             # *repeats* times.
@@ -83,6 +83,7 @@ class RummikubSolver:
             # but there are never more than *ruleset.repeats* of them.
             0 <= numbertiles,
             numbertiles <= ruleset.repeats,
+            # variable joker constraints for the current ruleset
             *joker_constraints,
         ]
 
@@ -100,6 +101,7 @@ class RummikubSolver:
             cp.Maximize(cp.sum(tiles @ tilevalue)), constraints
         )
 
+        # Problem solver used for the opening move ("initial meld").
         # Initial meld scoring is based entirely on the sets formed, and must
         # be equal to or higher than the minimal score. Maximize the tile count
         # _without jokers_.
