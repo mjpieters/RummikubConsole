@@ -57,16 +57,16 @@ class RummikubSolver:
         # Constraints for the optimisation problem
         numbertiles = tiles
         joker_constraints = []
-        if ruleset.jokers and ruleset.jokers != ruleset.repeats:
-            # Jokers count is distinct from number tile counts.
-            numbertiles = tiles[:-1]
-            jokers = tiles[-1]
-            joker_constraints = [
-                # You can place multiple jokers from your rack, but there are
-                # never more than *ruleset.jokers* of them.
-                0 <= jokers,
-                jokers <= ruleset.jokers,
-            ]
+        if ruleset.jokers:
+            numbertiles, jokers = tiles[:-1], tiles[-1]
+            if ruleset.jokers != ruleset.repeats:
+                # Jokers count is distinct from number tile counts.
+                joker_constraints = [
+                    # You can place multiple jokers from your rack, but there are
+                    # never more than *ruleset.jokers* of them.
+                    0 <= jokers,
+                    jokers <= ruleset.jokers,
+                ]
 
         constraints = [
             # placed sets can only be taken from tiles on the table and
@@ -100,14 +100,15 @@ class RummikubSolver:
         )
 
         # Initial meld scoring is based entirely on the sets formed, and must
-        # be equal to or higher than the minimal score.
+        # be equal to or higher than the minimal score. Maximize the tile count
+        # _without jokers_.
         setvalue = np.array(ruleset.setvalues, dtype=np.uint16)
         initial_constraints = [
             *constraints,
             sets @ setvalue >= ruleset.min_initial_value,
         ]
         p[SolverMode.INITIAL] = cp.Problem(
-            cp.Maximize(cp.sum(sets @ setvalue)), initial_constraints
+            cp.Maximize(cp.sum(numbertiles)), initial_constraints
         )
 
         self._problems = p
