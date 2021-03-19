@@ -1,9 +1,10 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shelve
 from cmd import Cmd
-from enum import Enum
 from collections import Counter
+from enum import Enum
 from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
@@ -18,6 +19,11 @@ from .gamestate import GameState
 from .types import Colours, SolverMode
 
 try:
+    from importlib_metadata import metadata, PackageNotFoundError
+except ImportError:
+    from importlib.metadata import metadata, PackageNotFoundError
+
+try:
     import readline
 
     has_readline = True
@@ -29,8 +35,12 @@ if TYPE_CHECKING:
     CompleterMethod = Callable[[Any, str, str, int, int], Sequence[str]]
 
 
-APPNAME = "RummikubSolver"
-APPAUTHOR = "OllieHooper"
+try:
+    info = metadata(__package__)
+    APPNAME, APPAUTHOR = info["name"], info["author"]
+except PackageNotFoundError:
+    APPNAME = __package__
+    APPAUTHOR = "<unknown>"
 SAVEPATH = Path(user_data_dir(APPNAME, APPAUTHOR))
 
 

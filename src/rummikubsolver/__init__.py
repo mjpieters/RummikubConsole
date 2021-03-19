@@ -1,4 +1,8 @@
-from importlib.metadata import version, PackageNotFoundError
+# SPDX-License-Identifier: MIT
+try:
+    from importlib_resources import version, PackageNotFoundError
+except ImportError:
+    from importlib.metadata import version, PackageNotFoundError
 
 try:
     __version__ = version(__name__)
