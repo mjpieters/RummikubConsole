@@ -121,12 +121,6 @@ class RuleSet:
             group formed is used.
 
             """
-            if _len(s) > mlen and joker in s:
-                # sets with free jokers should never be considered when
-                # placing opening sets; e.g. o10 r10 k10 j gives away the
-                # joker to the next player.
-                return 0
-
             nums = ((t - 1) % n + 1 for t in s if t != joker)
             n0 = _next(nums)
             try:
@@ -165,10 +159,16 @@ class RuleSet:
         return self._combine_with_jokers(groups)
 
     def _combine_with_jokers(self, sets: Iterable[Sequence[int]]) -> set[tuple[int]]:
-        if self.joker is None:
-            return {tuple(set) for set in sets}
-        # combine with jokers; any combination of tokens in the original series
-        # replaced by any number of possible jokers.
-        jokers = [self.joker] * self.jokers
-        combined = (combinations([*set, *jokers], len(set)) for set in sets)
-        return set(chain.from_iterable(combined))
+        j, mlen = self.joker, self.min_len
+        if j is None:
+            return set(map(tuple, sets))
+        # for sets of minimum length: combine with jokers; any combination of
+        # tokens in the original series replaced by any number of possible
+        # jokers. Do not generate further combinations for longer sets, as
+        # these are essentially free for the next player to take.
+        js = [j] * self.jokers
+        comb = (
+            combinations([*s, *js], len(s)) if len(s) == mlen else [tuple(s)]
+            for s in sets
+        )
+        return set(chain.from_iterable(comb))
