@@ -1,4 +1,5 @@
 from __future__ import annotations
+from itertools import chain
 from typing import TYPE_CHECKING
 
 import cvxpy as cp
@@ -29,11 +30,19 @@ class RummikubSolver:
     """
 
     def __init__(self, ruleset: RuleSet) -> None:
-        # matrix of booleans; is a given tile a member of the given set
-        # each column is a set, each row a tile
-        smatrix = np.array(
-            [[t in set for set in ruleset.sets] for t in ruleset.tiles],
-            dtype=np.bool,
+        # set membership matrix; how many copies of a given tile are present in
+        # a given set. Each column is a set, each row a tile
+        slen = len(ruleset.sets)
+        smatrix = np.zeros((ruleset.tile_count, slen), dtype=np.uint8)
+        np.add.at(
+            smatrix,
+            (
+                np.fromiter(chain.from_iterable(ruleset.sets), np.uint8) - 1,
+                np.repeat(
+                    np.arange(slen), np.fromiter(map(len, ruleset.sets), np.uint16)
+                ),
+            ),
+            1,
         )
 
         # Input parameters: counts for each tile on the table and on the rack
