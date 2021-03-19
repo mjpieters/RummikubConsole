@@ -102,10 +102,15 @@ class RummikubSolver:
             cp.Maximize(cp.sum(tiles @ tilevalue)), constraints
         )
 
-        # Initial meld scoring is based entirely on the sets formed
+        # Initial meld scoring is based entirely on the sets formed, and must
+        # be equal to or higher than the minimal score.
         setvalue = np.array(ruleset.setvalues, dtype=np.uint16)
+        initial_constraints = [
+            *constraints,
+            sets @ setvalue >= ruleset.min_initial_value,
+        ]
         p[SolverMode.INITIAL] = cp.Problem(
-            cp.Maximize(cp.sum(sets @ setvalue)), constraints
+            cp.Maximize(cp.sum(sets @ setvalue)), initial_constraints
         )
 
         self._problems = p
@@ -129,8 +134,8 @@ class RummikubSolver:
         prob = self._problems[mode]
         value = prob.solve(solver=cp.GLPK_MI)
         if np.isinf(value):
-            # problem could not be solved (probably due to a bug in handling
-            # tiles on the table or rack)
+            # no solution for the problem (e.g. no combination of tiles on
+            # the rack leads to a valid set or has enough points when opening)
             return SolverSolution(0, (), ())
 
         # convert index counts to repeated indices, as Python scalars

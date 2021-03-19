@@ -58,8 +58,7 @@ class RuleSet:
             mode = SolverMode.INITIAL if state.initial else SolverMode.TILE_COUNT
 
         sol = self._solver(mode, state)
-        minv = self.min_initial_value if mode is SolverMode.INITIAL else 1
-        if sol.score < minv:
+        if not sol.tiles:
             return None
 
         tiles = sol.tiles
