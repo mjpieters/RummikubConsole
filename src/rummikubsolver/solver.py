@@ -16,9 +16,10 @@ if TYPE_CHECKING:
 class RummikubSolver:
     """Solvers for finding possible tile placements in Rummikub games
 
-    Buids on the approach described by den Hertog, Dick & Hulshof,
-    P.. (2006). Solving Rummikub Problems by Integer Linear Programming.
-    The Computer Journal. 49. 10.1093/comjnl/bxl033.
+    Builds on the approach described by D. Den Hertog, P. B. Hulshof,
+    Solving Rummikub Problems by Integer Linear Programming, The Computer
+    Journal, Volume 49, Issue 6, November 2006, Pages 665–669,
+    https://doi.org/10.1093/comjnl/bxl033
 
     Adapted to work with different Rummikub rule sets, including having
     a different number of possible jokers from repeated number tiles within
