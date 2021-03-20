@@ -15,7 +15,7 @@ The algorithm used builds on the approach described by D. Den Hertog, P. B. Huls
 
 The original models described by Den Hertog and Hulshof assume that all possible sets that meet the minimum length requirements and can't be split up are desirable outcomes.
 
-However, any set containing at least one joker which is longer than the minimal run in effect contains a redundant joker, something you wouldn't want to leave on the table for the next player to use. In this implementation, such sets are omitted from
+However, any group set (tiles with the same number but with different colours) containing at least one joker, but which is longer than the minimal run, in effect contains a redundant joker, something you wouldn't want to leave on the table for the next player to use. The same applies to run sets (tiles of the same colour but with consecutive numbers), that are longer than the minimal set length but start or end with a joker. In this implementation, such sets are omitted from
 the possible options.
 
 The implementation also includes a solver for the initial move, where you can only

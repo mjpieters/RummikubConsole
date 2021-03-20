@@ -272,8 +272,15 @@ class SolverConsole(Cmd):
     def game(self) -> GameState:
         return self._games[self._current_game]
 
-    def message(self, *msg: object) -> None:
-        click.echo(" ".join(map(str, msg)), file=self.stdout)
+    def message(self, *msg: object, wrap=False, perhaps_paged=False) -> None:
+        text = " ".join(map(str, msg))
+        twidth, theight = click.get_terminal_size()
+        if wrap:
+            text = click.wrap_text(text, width=twidth, preserve_paragraphs=True)
+        if perhaps_paged and len(text.splitlines()) >= theight:
+            click.echo_via_pager(text)
+        else:
+            click.echo(text, file=self.stdout)
 
     def error(self, *msg: object) -> None:
         click.echo(" ".join(["***", *map(str, msg)]), file=self.stdout)
@@ -628,32 +635,64 @@ class SolverConsole(Cmd):
     do_quit = do_stop
     do_EOF = do_stop
 
+    def help_about(self) -> None:
+        help_text = dedent(
+            f"""\
+            The Rummikub Solver Console was created by Martijn Pieters, based on
+            the RummikubSolver project by Ollie Hooper. This is version
+            {__project__} {__version__}.
+
+            It uses a solver algorithm that builds on the concepts from a paper
+            written by D. Den Hertog and P. B. Hulshof, "Solving Rummikub
+            Problems by Integer Linear Programming", published in The Computer
+            Journal, Volume 49, Issue 6, November 2006, pages 665-669 (DOI
+            10.1093/comjnl/bxl033).
+
+            The solver has been improved by removing sets where the joker is
+            "surplus" (freely removable) when considering solutions, and has
+            a dedicated solver configuration for opening plays.
+            """
+        )
+        self.message(help_text, wrap=True, perhaps_paged=True)
+
     def help_tiles(self) -> None:
         cols = chain(islice(Colours, self._ruleset.colours), (Colours.joker,))
-        help_text = dedent(
-            """
-            Commands that take tile arguments accept 1 or more tile
-            specifications. Tiles have a _colour_ and a _number_, and you name
-            tiles by combining 1 letter representing the colour of the tile with
-            a number. Any jokers are represented by the letter "j", and no
-            number.
+        width = click.get_terminal_size()[0]
+        # there is no easy option to rewrap text _with ANSI escapes_, so
+        # rewrap text in sections.
+        dedent_and_wrap = lambda t: click.wrap_text(  # noqa: E731
+            dedent(t), width=width, preserve_paragraphs=True
+        )
+        help_text = "\n\n".join(
+            [
+                dedent_and_wrap(
+                    """\
+                    Commands that take tile arguments accept 1 or more tile
+                    specifications. Tiles have a _colour_ and a _number_, and
+                    you name tiles by combining 1 letter representing the colour
+                    of the tile with a number. Any jokers are represented by the
+                    letter "j", and no number.
 
-            The supported tile codes are:
+                    The supported tile codes are:
+                    """
+                ),
+                "\n".join([f"- {c.style(c.value)}: {c}" for c in cols]),
+                dedent_and_wrap(
+                    """
+                    For example, if you picked a black 13, a red 7 and a joker,
+                    you can add these to your rack with the command "addrack k13
+                    r7 j".
 
-            {tile_list}
+                    You can also specify a _run_ or _group_ of tiles:
 
-            For example, if you picked a black 13, a red 7 and a joker, you can
-            add these to your rack with the command "addrack k13 r7 j".
+                    - Name a colour and a range of numbers, e.g. k1-5, to specify
+                    a series of tiles; this expands to all numbers in between.
 
-            You can also specify a _run_ or _group_ of tiles:
-
-            - Name a colour and a range of numbers, e.g. k1-5, to specify
-              a series of tiles; this expands to all numbers in between.
-
-            - Name multiple colours and a single number, e.g. kro10, to specify
-              a tile group, this expands to each individual colour for that
-              number.
-
-            """
-        ).format(tile_list="\n".join([f"- {c.style(c.value)}: {c}" for c in cols]))
-        self.message(help_text)
+                    - Name multiple colours and a single number, e.g. kro10, to
+                    specify a tile group, this expands to each individual colour
+                    for that number.
+                    """
+                ),
+            ]
+        )
+        self.message(help_text, perhaps_paged=True)
