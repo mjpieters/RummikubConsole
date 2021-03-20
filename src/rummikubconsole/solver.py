@@ -61,14 +61,12 @@ class RummikubSolver:
         joker_constraints = []
         if ruleset.jokers:
             numbertiles, jokers = tiles[:-1], tiles[-1]
-            if ruleset.jokers != ruleset.repeats:
-                # Jokers count is distinct from number tile counts.
-                joker_constraints = [
-                    # You can place multiple jokers from your rack, but there are
-                    # never more than *ruleset.jokers* of them.
-                    0 <= jokers,
-                    jokers <= ruleset.jokers,
-                ]
+            joker_constraints = [
+                # You can place multiple jokers from your rack, but there are
+                # never more than *ruleset.jokers* of them.
+                0 <= jokers,
+                jokers <= ruleset.jokers,
+            ]
 
         constraints = [
             # placed sets can only be taken from selected rack tiles and what
