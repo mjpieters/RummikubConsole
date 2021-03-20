@@ -146,7 +146,7 @@ class RuleSet:
             for c, length in product(colours, lengths)
             for num in range(1, ns - length + 2)
         )
-        return self._combine_with_jokers(series)
+        return self._combine_with_jokers(series, runs=True)
 
     def _groups(self) -> set[tuple[int]]:
         ns, cs = self.numbers, self.colours
@@ -159,17 +159,25 @@ class RuleSet:
         )
         return self._combine_with_jokers(groups)
 
-    def _combine_with_jokers(self, sets: Iterable[Sequence[int]]) -> set[tuple[int]]:
+    def _combine_with_jokers(
+        self, sets: Iterable[Sequence[int]], runs: bool = False
+    ) -> set[tuple[int]]:
         j, mlen = self.joker, self.min_len
         if j is None:
             return set(map(tuple, sets))
         # for sets of minimum length: combine with jokers; any combination of
         # tokens in the original series replaced by any number of possible
-        # jokers. Do not generate further combinations for longer sets, as
-        # these would leave jokers free for the next player to take.
+        # jokers. For groups, do not generate further combinations for longer sets, as
+        # these would leave jokers free for the next player to take. For runs
+        # only generate 'inner' jokers.
+        longer = lambda s: [tuple(s)]  # noqa: E731
+        if runs:
+            longer = lambda s: (  # noqa: E731
+                (s[0], *c, s[-1]) for c in combinations([*s[1:-1], *js], len(s) - 2)
+            )
         js = [j] * self.jokers
         comb = (
-            combinations([*s, *js], len(s)) if len(s) == mlen else [tuple(s)]
+            combinations([*s, *js], len(s)) if len(s) == mlen else longer(s)
             for s in sets
         )
         return set(chain.from_iterable(comb))

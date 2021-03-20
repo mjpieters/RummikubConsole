@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - readline column handling at the command prompt no longer is thrown off by ANSI colour codes.
+- Include sets with jokers in runs longer than the minimum length, where the joker is not first or last.
 
 
 ## [1.0.0b3] - 2021-03-19
