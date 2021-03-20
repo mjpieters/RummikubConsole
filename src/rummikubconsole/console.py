@@ -13,7 +13,7 @@ from typing import Callable, Iterable, cast, Any, Sequence, TYPE_CHECKING
 import click
 from appdirs import user_data_dir
 
-from . import __project__, __author__
+from . import __project__, __author__, __version__
 from .ruleset import RuleSet
 from .gamestate import GameState
 from .types import Colours, SolverMode, expand_tileref
@@ -173,7 +173,7 @@ def _tile_display(tiles: Iterable[str]) -> str:
 
 class SolverConsole(Cmd):
     _shelve = None
-    intro = "Welcome to the Rummikub Solver console\n"
+    intro = f"Welcome to the Rummikub Solver console, version {__version__}\n"
     prompt = BASE_PROMPT
 
     def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
