@@ -38,6 +38,12 @@ or use a tool like [pipx][] to help you manage command-line tool installations l
 $ pipx install RummikubConsole 
 ```
 
+## Usage
+
+Run the `rsconsole` command-line tool to open the console, or run `rsconsole --help` to see how you can adjust the Rummikub rules (you can adjust tile count, colours, joker count, the minimum number of tiles to make a set and the minimum score for the initial placement).
+
+You then enter the console command loop. Enter `?` or `h` or `help` to list the available commands, and `help <command>` to get help on what each command does.
+
 ## Development
 
 The source code for this project can be found [on GitHub][gh].
@@ -50,12 +56,6 @@ pipenv run rsconsole
 ```
 
 to run the console solver.
-
-## Usage
-
-Run the `rsconsole` command-line tool to open the console, or run `rsconsole --help` to see how you can adjust the Rummikub rules (you can adjust tile count, colours, joker count, the minimum number of tiles to make a set and the minimum score for the initial placement).
-
-You then enter the console command loop. Enter `?` or `h` or `help` to list the available commands, and `help <command>` to get help on what each command does.
 
 ## Credits
 
