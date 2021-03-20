@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Compact tile group and run notation in commands; a colour followed by two numbers separated by a dash (`k3-6`) expands to a run of tiles (here, `k3`, `k4`, `k5` and `k6`), and multiple colour letters followed by a number (e.g. `bro8`) expands into a group (`b8`, `r8` and `o8`). 
+- Added a 'version' command and improved the help system.
 
 ### Fixed
 

@@ -635,6 +635,12 @@ class SolverConsole(Cmd):
     do_quit = do_stop
     do_EOF = do_stop
 
+    def do_version(self, arg: str) -> None:
+        """version
+        Print the version number
+        """
+        self.message(f"{__project__} version {__version__}")
+
     def help_about(self) -> None:
         help_text = dedent(
             f"""\
