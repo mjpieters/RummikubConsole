@@ -65,7 +65,7 @@ The initial version of the solver and console were written by [Ollie Hooper][oh]
 
 This version is a complete rewrite by [Martijn Pieters][mp], with new console implementation, expansion of the solver to improve performance and address shortcomings in the original paper, as well as multi-game, game state tracking and persistence support. 
 
-[screenshot]: ./screenshot.png
+[screenshot]: https://raw.githubusercontent.com/mjpieters/RummikubConsole/master/screenshot.png
 [pipx]: https://pipxproject.github.io/
 [Pipenv]: https://pipenv.readthedocs.io/
 [gh]: https://github.com/Ollie-Hooper/RummikubSolver
