@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Instead of repeating the last command, hitting enter at the prompt without a command now defaults to the `solve` command instead.
 
+### Fixed
+
+- Minor changes to the contents of the package distribution (removing some surplus dev-only files).
+
 ## [1.0.0] - 2021-03-20
 
 ### Added
