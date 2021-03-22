@@ -2,6 +2,8 @@
 
 A Rummikub solver console supporting multiple games and persistence, written in Python. 
 
+![screenshot of a macOS terminal window with a Rummikub Console session in progress][screenshot]
+
 The algorithm used builds on the approach described by D. Den Hertog, P. B. Hulshof (2006), "Solving Rummikub Problems by Integer Linear Programming", *The Computer Journal, 49(6)*, 665-669 ([DOI 10.1093/comjnl/bxl033](https://doi.org/10.1093/comjnl/bxl033)).
 
 ## Features
@@ -63,6 +65,7 @@ The initial version of the solver and console were written by [Ollie Hooper][oh]
 
 This version is a complete rewrite by [Martijn Pieters][mp], with new console implementation, expansion of the solver to improve performance and address shortcomings in the original paper, as well as multi-game, game state tracking and persistence support. 
 
+[screenshot]: ./screenshot.png
 [pipx]: https://pipxproject.github.io/
 [Pipenv]: https://pipenv.readthedocs.io/
 [gh]: https://github.com/Ollie-Hooper/RummikubSolver
