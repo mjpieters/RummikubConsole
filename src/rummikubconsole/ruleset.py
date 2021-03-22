@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
 from functools import cached_property
 from itertools import chain, combinations, islice, product, repeat
 from typing import Iterable, Optional, Sequence
