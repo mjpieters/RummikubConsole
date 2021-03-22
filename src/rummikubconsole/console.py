@@ -582,7 +582,7 @@ class SolverConsole(Cmd):
     complete_t2r = TileSource.TABLE.tile_completer
     complete_remove = TileSource.TABLE.tile_completer
 
-    def do_solve(self, arg: str) -> None:
+    def do_solve(self, arg: str = "") -> None:
         """solve [tiles | value | initial]
         Attempt to place tiles.
 
@@ -622,6 +622,7 @@ class SolverConsole(Cmd):
 
             self.message("Placed tiles on table")
 
+    emptyline = do_solve
     complete_solve = _fixed_completer("tiles", "value", "initial")
 
     def do_stop(self, arg: str) -> bool:
