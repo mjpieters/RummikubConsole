@@ -103,3 +103,14 @@ class ProposedSolution(NamedTuple):
 
     tiles: Sequence[int]
     sets: Sequence[tuple[int]]
+
+
+class TableArrangement(NamedTuple):
+    """Possible arrangement for tiles on the table
+
+    Includes a count of how many jokers are redundant (can be used freely).
+
+    """
+
+    sets: Sequence[tuple[int]]
+    free_jokers: int

@@ -625,6 +625,33 @@ class SolverConsole(Cmd):
     emptyline = do_solve
     complete_solve = _fixed_completer("tiles", "value", "initial")
 
+    def do_check(self, arg: str) -> None:
+        """check
+        Check the table for validity and set placement
+
+        Either shows you a valid arrangement of the tiles on the board, or
+        if no such arrangement can be made, reports this. It also reports on
+        the number of jokers that can be taken without invalidating the
+        table.
+
+        """
+        arr = self._ruleset.arrange_table(self.game)
+        if not arr:
+            self.message(
+                click.style(
+                    "The tiles on the table can't be formed into valid sets",
+                    fg="yellow",
+                )
+            )
+            return
+
+        self.message("Possible table arrangement:")
+        for s in arr.sets:
+            self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
+        if arr.free_jokers:
+            jokers = ", ".join([Colours.c(JOKER)] * arr.free_jokers)
+            self.message(click.style(f"Free jokers: {jokers}", fg="bright_green"))
+
     def do_stop(self, arg: str) -> bool:
         """stop | end | quit
         Exit from the console

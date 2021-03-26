@@ -65,6 +65,10 @@ class GameState:
         rack = list((self.rack - moved).elements())
         return type(self)(self._tile_count, table, rack)
 
+    def table_only(self) -> GameState:
+        """New state with just the table tiles"""
+        return type(self)(self._tile_count, self.sorted_table)
+
     @property
     def sorted_rack(self) -> list[int]:
         """The rack tile numbers as a sorted list"""

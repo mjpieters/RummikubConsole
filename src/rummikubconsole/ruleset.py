@@ -6,7 +6,7 @@ from typing import Iterable, Optional, Sequence
 
 from .gamestate import GameState
 from .solver import RummikubSolver
-from .types import Colours, ProposedSolution, SolverMode
+from .types import Colours, ProposedSolution, SolverMode, TableArrangement
 
 
 class RuleSet:
@@ -76,6 +76,26 @@ class RuleSet:
                 set_indices = stage2.set_indices
 
         return ProposedSolution(tiles, [self.sets[i] for i in set_indices])
+
+    def arrange_table(self, state: GameState) -> TableArrangement:
+        """Check if the tiles on the table can be arranged into sets
+
+        Produces a series of sets and how many unattached jokers there are.
+
+        """
+        table_only, joker = state.table_only(), self.joker
+        if joker is not None:
+            joker_count = table_only.table[joker]
+            table_only.remove_table((self.joker,) * joker_count)
+
+        for jc in range(joker_count + 1):
+            if jc:
+                table_only.add_table((self.joker,))
+            sol = self._solver(SolverMode.TILE_COUNT, table_only)
+            if sol.set_indices:
+                return TableArrangement(
+                    [self.sets[s] for s in sol.set_indices], joker_count - jc
+                )
 
     @cached_property
     def game_state_key(self) -> str:
