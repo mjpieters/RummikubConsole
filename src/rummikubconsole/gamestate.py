@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 from collections import Counter
-from typing import Iterable, Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 
@@ -67,7 +67,7 @@ class GameState:
         """The table tile numbers as a sorted list"""
         return sorted(self.table.elements())
 
-    def add_rack(self, additions: Iterable[int]) -> None:
+    def add_rack(self, additions: Sequence[int]) -> None:
         if not additions:
             return
         self.rack += Counter(additions)
@@ -81,7 +81,7 @@ class GameState:
         np.subtract.at(rack, np.array(removals) - 1, 1)
         rack[rack < 0] = 0  # in case we removed tiles not on the rack
 
-    def add_table(self, additions: Iterable[int]) -> None:
+    def add_table(self, additions: Sequence[int]) -> None:
         if not additions:
             return
         self.table += Counter(additions)
