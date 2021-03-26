@@ -26,36 +26,44 @@ class GameState:
     rack_array: np.array[np.int8]  # array with per-tile counts on the rack
     table_array: np.array[np.int8]  # array with per-tile counts on the table
 
-    def __init__(self, tile_count: int) -> None:
+    def __init__(
+        self,
+        tile_count: int,
+        table: Optional[Sequence[int]] = None,
+        rack: Optional[Sequence[int]] = None,
+    ) -> None:
         self._tile_count = tile_count
         self.reset()
+        if table:
+            self.add_table(table)
+        if rack:
+            self.add_rack(rack)
 
     def reset(self) -> None:
         self.table, self.rack, self.initial = Counter(), Counter(), True
         self.table_array = np.zeros(self._tile_count, dtype=np.int8)
         self.rack_array = np.zeros(self._tile_count, dtype=np.int8)
 
+    def __repr__(self) -> str:
+        return (
+            f"{type(self).__name__}({self._tile_count}, "
+            f"table={tuple(self.sorted_table)} rack={tuple(self.sorted_rack)})"
+        )
+
     def with_move(self, tiles: Sequence[int]) -> GameState:
         """New state with tiles moved
 
-        The tiles are assumed to be on the rack and are moved to the table.
+        The tiles are verified to be on the rack and are moved to the table.
         This doesn't mutate this state but rather creates a new state with
         the new tile locations
 
         """
-        clone = self.__new__(type(self))
-        clone._tile_count = self._tile_count
-
-        tcounts = Counter(tiles)
-        clone.table = self.table + tcounts
-        clone.rack = self.rack - tcounts
-
-        array = np.zeros_like(self.table_array)
-        np.add.at(array, np.array(tiles) - 1, 1)
-        clone.table_array = np.add(self.table_array, array)
-        clone.rack_array = np.subtract(self.rack_array, array)
-
-        return clone
+        moved = Counter(tiles)
+        if moved - self.rack:
+            raise ValueError("Move includes tiles not on the rack")
+        table = list((self.table + moved).elements())
+        rack = list((self.rack - moved).elements())
+        return type(self)(self._tile_count, table, rack)
 
     @property
     def sorted_rack(self) -> list[int]:
