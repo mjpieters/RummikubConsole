@@ -162,12 +162,13 @@ def _tile_display(tiles: Iterable[str]) -> str:
     line: list[str] = []
     lines, used = [line], 0
     for tile in tiles:
-        if used - 1 >= width:  # do not count a space at the end
+        tl = len(tile) + 2  # includes comma and space
+        if used + tl - 1 >= width:  # do not count a space at the end
             # start a new line
             used, line = 0, []
             lines.append(line)
         line.append(Colours.c(tile))
-        used += len(tile) + 2
+        used += tl
     return "  " + ",\n  ".join([", ".join(ln) for ln in lines])
 
 
