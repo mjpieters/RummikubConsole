@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pin cvxopt to 1.3.0 or newer, to avoid running into a rare edgecase where the
   solver aborts with a core dump.
 
+- Use `shutil.get_terminal_size()` to determine the terminal width and height,
+  instead of `click.get_terminal_size()`; click 8.1.0 removed support for this
+  function.  [#2](https://github.com/mjpieters/RummikubConsole/issues/2).
+
 ## [1.2.1] - 2021-04-09
 
 ### Fixed

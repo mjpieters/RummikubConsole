@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import shelve
+import shutil
 from cmd import Cmd
 from collections import Counter
 from enum import Enum
@@ -156,7 +157,7 @@ def _tile_display(tiles: Iterable[str]) -> str:
     displayed. A 2-space indent is added to all lines.
 
     """
-    width = click.get_terminal_size()[0] - 4  # 2 space indent, 2 spaces margin
+    width = shutil.get_terminal_size()[0] - 4  # 2 space indent, 2 spaces margin
     if width < 3:  # obviously too narrow for even a single tile, ignore
         width = 76
     line: list[str] = []
@@ -275,7 +276,7 @@ class SolverConsole(Cmd):
 
     def message(self, *msg: object, wrap=False, perhaps_paged=False) -> None:
         text = " ".join(map(str, msg))
-        twidth, theight = click.get_terminal_size()
+        twidth, theight = shutil.get_terminal_size()
         if wrap:
             text = click.wrap_text(text, width=twidth, preserve_paragraphs=True)
         if perhaps_paged and len(text.splitlines()) >= theight:
@@ -692,7 +693,7 @@ class SolverConsole(Cmd):
 
     def help_tiles(self) -> None:
         cols = chain(islice(Colours, self._ruleset.colours), (Colours.joker,))
-        width = click.get_terminal_size()[0]
+        width = shutil.get_terminal_size()[0]
         # there is no easy option to rewrap text _with ANSI escapes_, so
         # rewrap text in sections.
         dedent_and_wrap = lambda t: click.wrap_text(  # noqa: E731
