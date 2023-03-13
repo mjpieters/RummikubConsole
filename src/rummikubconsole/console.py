@@ -39,7 +39,7 @@ BASE_PROMPT = "(rsconsole) "
 CURRENT = "__current_game__"
 DEFAULT_NAME = "default"
 # includes readline non-printable delimiters
-N1, N2 = "\x01", "\x02"  # start nonprintable, stop nonprintable
+N1, N2 = ("\x01", "\x02") if has_readline else ("", "")  # start nonprintable, stop nonprintable
 GAME_CLOSED = N1 + click.style(N2 + "\N{BALLOT BOX WITH X}" + N1, fg="bright_red") + N2
 GAME_OPEN = (
     N1 + click.style(N2 + "\N{BALLOT BOX WITH CHECK}" + N1, fg="bright_green") + N2
