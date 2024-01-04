@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
+
 from functools import cached_property
 from itertools import chain, combinations, islice, product, repeat
-from typing import Iterable, Optional, Sequence
+from typing import Callable, Iterable, Optional, Sequence, Sized
 
 from .gamestate import GameState
 from .solver import RummikubSolver
@@ -136,7 +137,12 @@ class RuleSet:
             tiles = chain(range(i, n + 1), repeat(n - i))
             rlvalues.append([v + t for v, t in zip(rlvalues[-1], tiles)])
 
-        def _calc(s, _next=next, _len=len, joker=self.joker):
+        def _calc(
+            s: tuple[int],
+            _next: Callable[[Iterable[int]], int] = next,
+            _len: Callable[[Sized], int] = len,
+            joker: Optional[int] = self.joker,
+        ) -> int:
             """Calculate sum of numeric value of tiles in set.
 
             If there are jokers in the set the max possible value for the run or
@@ -144,7 +150,11 @@ class RuleSet:
 
             """
             nums = ((t - 1) % n + 1 for t in s if t != joker)
-            n0 = _next(nums)
+            try:
+                n0 = _next(nums)
+            except StopIteration:
+                # a set of all jokers. Use length times max number value
+                return _len(s) * n
             try:
                 # n0 == n1: group of same numbers, else run of same colour
                 return _len(s) * n0 if n0 == _next(nums) else rlvalues[_len(s)][n0]
