@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from itertools import chain, combinations, islice, product, repeat
-from typing import Callable, Iterable, Optional, Sequence, Sized
+from typing import Callable, Iterable, Iterator, Sequence, Sized
 
 from .gamestate import GameState
 from .solver import RummikubSolver
@@ -42,8 +42,8 @@ class RuleSet:
         return GameState(self.tile_count)
 
     def solve(
-        self, state: GameState, mode: Optional[SolverMode] = None
-    ) -> Optional[ProposedSolution]:
+        self, state: GameState, mode: SolverMode | None = None
+    ) -> ProposedSolution | None:
         """Find the best option for placing tiles from the rack
 
         If no mode is selected, uses the game initial state flag
@@ -72,8 +72,8 @@ class RuleSet:
             # available on the table to look for additional tiles to place.
             new_state = state.with_move(sol.tiles)
             stage2 = self._solver(SolverMode.TILE_COUNT, new_state)
-            if stage2 is not None:
-                tiles = sorted(tiles + stage2.tiles)
+            if stage2.tiles:
+                tiles = sorted([*tiles, *stage2.tiles])
                 set_indices = stage2.set_indices
 
         return ProposedSolution(tiles, [self.sets[i] for i in set_indices])
@@ -85,18 +85,22 @@ class RuleSet:
 
         """
         table_only, joker = state.table_only(), self.joker
+        joker_count = 0
         if joker is not None:
             joker_count = table_only.table[joker]
-            table_only.remove_table((self.joker,) * joker_count)
+            table_only.remove_table((joker,) * joker_count)
 
         for jc in range(joker_count + 1):
             if jc:
-                table_only.add_table((self.joker,))
+                assert joker is not None
+                table_only.add_table((joker,))
             sol = self._solver(SolverMode.TILE_COUNT, table_only)
             if sol.set_indices:
                 return TableArrangement(
                     [self.sets[s] for s in sol.set_indices], joker_count - jc
                 )
+
+        return TableArrangement((), 0)
 
     @cached_property
     def game_state_key(self) -> str:
@@ -122,7 +126,7 @@ class RuleSet:
         return list(range(1, self.tile_count + 1))
 
     @cached_property
-    def sets(self) -> Sequence[tuple[int]]:
+    def sets(self) -> Sequence[tuple[int, ...]]:
         return sorted(self._runs() | self._groups())
 
     @cached_property
@@ -133,15 +137,15 @@ class RuleSet:
         # 3 tile run with lowest number 12 must have a joker acting as the 11 in
         # (j, 12, 13), and for initial placement the sum of numbers would be 36.
         rlvalues = [[0] * (n + 1)]
-        for i, rl in enumerate(range(1, mlen * 2)):
+        for i, _rl in enumerate(range(1, mlen * 2)):
             tiles = chain(range(i, n + 1), repeat(n - i))
             rlvalues.append([v + t for v, t in zip(rlvalues[-1], tiles)])
 
         def _calc(
-            s: tuple[int],
-            _next: Callable[[Iterable[int]], int] = next,
+            s: tuple[int, ...],
+            _next: Callable[[Iterator[int]], int] = next,
             _len: Callable[[Sized], int] = len,
-            joker: Optional[int] = self.joker,
+            joker: int | None = self.joker,
         ) -> int:
             """Calculate sum of numeric value of tiles in set.
 
@@ -167,7 +171,7 @@ class RuleSet:
 
         return [_calc(set) for set in self.sets]
 
-    def _runs(self) -> set[tuple[int]]:
+    def _runs(self) -> set[tuple[int, ...]]:
         colours, ns = range(self.colours), self.numbers
         lengths = range(self.min_len, self.min_len * 2)
         # runs start at a given coloured tile, and are between min_len and
@@ -179,7 +183,7 @@ class RuleSet:
         )
         return self._combine_with_jokers(series, runs=True)
 
-    def _groups(self) -> set[tuple[int]]:
+    def _groups(self) -> set[tuple[int, ...]]:
         ns, cs = self.numbers, self.colours
         # groups are between min_len and #colours long, a group per possible
         # tile number value.
@@ -192,7 +196,7 @@ class RuleSet:
 
     def _combine_with_jokers(
         self, sets: Iterable[Sequence[int]], runs: bool = False
-    ) -> set[tuple[int]]:
+    ) -> set[tuple[int, ...]]:
         j, mlen = self.joker, self.min_len
         if j is None:
             return set(map(tuple, sets))
@@ -201,10 +205,14 @@ class RuleSet:
         # jokers. For groups, do not generate further combinations for longer sets, as
         # these would leave jokers free for the next player to take. For runs
         # only generate 'inner' jokers.
-        longer = lambda s: [tuple(s)]  # noqa: E731
+        longer: Callable[[Sequence[int]], Iterable[tuple[int, ...]]] = lambda s: [  # noqa: E731
+            tuple(s)
+        ]
         if runs:
-            longer = lambda s: (  # noqa: E731
-                (s[0], *c, s[-1]) for c in combinations([*s[1:-1], *js], len(s) - 2)
+            longer = (  # noqa: E731
+                lambda s: (
+                    (s[0], *c, s[-1]) for c in combinations([*s[1:-1], *js], len(s) - 2)
+                )
             )
         js = [j] * self.jokers
         comb = (

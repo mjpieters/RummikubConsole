@@ -43,7 +43,7 @@ from .ruleset import RuleSet
     default=3,
     show_default=True,
     type=click.IntRange(2, 6),
-    help="Mininum number of tiles in a set (2 - 6)",
+    help="Minimum number of tiles in a set (2 - 6)",
     metavar="M",
 )
 @click.option(

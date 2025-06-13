@@ -34,10 +34,24 @@ You can install this project the usual way:
 $ pip install RummikubConsole
 ```
 
-or use a tool like [pipx][] to help you manage command-line tool installations like these:
+or use a tool like [pipx][] or [uv][] to help you manage command-line tool installations like these:
+
+Using pipx:
 
 ```sh
 $ pipx install RummikubConsole 
+```
+
+Using uv:
+
+```sh
+uv tool install RummikubConsole
+```
+
+or, running the console directly:
+
+```sh
+uvx --from RummikubConsole rsconsole
 ```
 
 ## Usage
@@ -50,11 +64,10 @@ You then enter the console command loop. Enter `?` or `h` or `help` to list the 
 
 The source code for this project can be found [on GitHub][gh].
 
-When running locally, install [Pipenv], then run:
+When running locally, install [uv], then run:
 
 ```bash
-pipenv install
-pipenv run rsconsole
+uv run rsconsole
 ```
 
 to run the console solver.
@@ -67,7 +80,7 @@ This version is a complete rewrite by [Martijn Pieters][mp], with new console im
 
 [screenshot]: https://raw.githubusercontent.com/mjpieters/RummikubConsole/master/screenshot.png
 [pipx]: https://pipxproject.github.io/
-[Pipenv]: https://pipenv.readthedocs.io/
-[gh]: https://github.com/Ollie-Hooper/RummikubSolver
+[uv]: https://docs.astral.sh/uv/
+[gh]: https://github.com/mjpieters/RummikubSolver
 [oh]: https://github.com/Ollie-Hooper
 [mp]: https://www.zopatista.com

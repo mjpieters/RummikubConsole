@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
+
 from collections import Counter
-from typing import Optional, Sequence
+from typing import Sequence
 
 import numpy as np
 
@@ -23,14 +24,14 @@ class GameState:
     # arrays maintained from the above counters for the solver
     # These use signed integers to simplify overflow handling when removing
     # tiles.
-    rack_array: np.array[np.int8]  # array with per-tile counts on the rack
-    table_array: np.array[np.int8]  # array with per-tile counts on the table
+    rack_array: np.typing.NDArray[np.int8]  # array with per-tile counts on the rack
+    table_array: np.typing.NDArray[np.int8]  # array with per-tile counts on the table
 
     def __init__(
         self,
         tile_count: int,
-        table: Optional[Sequence[int]] = None,
-        rack: Optional[Sequence[int]] = None,
+        table: Sequence[int] | None = None,
+        rack: Sequence[int] | None = None,
     ) -> None:
         self._tile_count = tile_count
         self.reset()

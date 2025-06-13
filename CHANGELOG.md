@@ -1,8 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Changed
+
+- Modernized development toolset (uv, ruff, pyright), and address the issues flagged by these tools.
+- Replaced the deprecated `appdirs` package with `platformdirs`.
 
 ## [1.2.5] - 2024-01-04
 
@@ -16,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Made readline-specific escape codes to mark un-printable codes dependent on
-  wether or not readline is available.
+  whether or not readline is available.
   [#4](https://github.com/mjpieters/RummikubConsole/issues/4).
 
 ## [1.2.3] - 2022-11-08

@@ -1,16 +1,18 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
+
 import re
 from enum import Enum
-from typing import Iterator, NamedTuple, Optional, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterator, NamedTuple, Sequence
 
 import click
-
 
 if TYPE_CHECKING:
     from typing import TypedDict
 
-    ColourEnumStyle = TypedDict("ColourEnumStyle", {"fg": str, "reverse": bool})
+    class ColourEnumStyle(TypedDict):
+        fg: str
+        reverse: bool
 
 
 class Colours(Enum):
@@ -26,7 +28,6 @@ class Colours(Enum):
     joker = "j", "cyan", True
 
     if TYPE_CHECKING:
-        value: str
         style_args: ColourEnumStyle
 
     def __new__(cls, value: str, colour: str = "white", reverse: bool = False):
@@ -36,7 +37,7 @@ class Colours(Enum):
         return member
 
     @classmethod
-    def c(cls, text: str, prefix: Optional[str] = None):
+    def c(cls, text: str, prefix: str | None = None):
         """Add ANSI colour codes to a tile"""
         prefix = prefix or text[0]
         return cls(prefix).style(text)
@@ -62,21 +63,19 @@ TILEREF = re.compile(
     |   # single tile
         (?P<tile>[{c}][1-9][0-9]?)
     )$
-    """.format(
-        c="".join([c.value for c in Colours])
-    ),
+    """.format(c="".join([c.value for c in Colours])),
     flags=re.VERBOSE,
 )
 
 
 def expand_tileref(t: str) -> Iterator[str]:
-    if (match := TILEREF.match(t)) :
-        if (tile := match["tile"]) :
+    if match := TILEREF.match(t):
+        if tile := match["tile"]:
             yield tile
-        elif (run := match["run"]) :
+        elif run := match["run"]:
             for num in range(int(match["start"]), int(match["end"]) + 1):
                 yield f"{run[0]}{num}"
-        elif (group := match["colours"]) :
+        elif group := match["colours"]:
             num = match["num"]
             yield from (f"{g}{num}" for g in group)
         return
@@ -102,7 +101,7 @@ class ProposedSolution(NamedTuple):
     """Proposed next move to make for a given game state"""
 
     tiles: Sequence[int]
-    sets: Sequence[tuple[int]]
+    sets: Sequence[tuple[int, ...]]
 
 
 class TableArrangement(NamedTuple):
@@ -112,5 +111,5 @@ class TableArrangement(NamedTuple):
 
     """
 
-    sets: Sequence[tuple[int]]
+    sets: Sequence[tuple[int, ...]]
     free_jokers: int

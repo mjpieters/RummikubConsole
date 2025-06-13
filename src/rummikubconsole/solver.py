@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
+
 from itertools import chain
 from typing import TYPE_CHECKING
 
@@ -8,7 +9,6 @@ import numpy as np
 
 from .gamestate import GameState
 from .types import SolverMode, SolverSolution
-
 
 if TYPE_CHECKING:
     from .ruleset import RuleSet
@@ -19,7 +19,7 @@ class RummikubSolver:
 
     Builds on the approach described by D. Den Hertog, P. B. Hulshof,
     Solving Rummikub Problems by Integer Linear Programming, The Computer
-    Journal, Volume 49, Issue 6, November 2006, Pages 665–669,
+    Journal, Volume 49, Issue 6, November 2006, Pages 665-669,
     https://doi.org/10.1093/comjnl/bxl033
 
     Adapted to work with different Rummikub rule sets, including having
@@ -64,11 +64,11 @@ class RummikubSolver:
             joker_constraints = [
                 # You can place multiple jokers from your rack, but there are
                 # never more than *ruleset.jokers* of them.
-                0 <= jokers,
+                jokers >= 0,
                 jokers <= ruleset.jokers,
             ]
 
-        constraints = [
+        constraints: list[cp.Constraint] = [
             # placed sets can only be taken from selected rack tiles and what
             # was already placed on the table.
             smatrix @ sets == table + tiles,
@@ -76,11 +76,11 @@ class RummikubSolver:
             tiles <= rack,
             # A given set could appear multiple times, but never more than
             # *repeats* times.
-            0 <= sets,
+            sets >= 0,
             sets <= ruleset.repeats,
             # You can place multiple tiles with the same colour and number
             # but there are never more than *ruleset.repeats* of them.
-            0 <= numbertiles,
+            numbertiles >= 0,
             numbertiles <= ruleset.repeats,
             # variable joker constraints for the current ruleset
             *joker_constraints,
@@ -88,7 +88,7 @@ class RummikubSolver:
 
         p: dict[SolverMode, cp.Problem] = {}
         # Problem solver maximising number of tiles placed
-        p[SolverMode.TILE_COUNT] = cp.Problem(cp.Maximize(cp.sum(tiles)), constraints)
+        p[SolverMode.TILE_COUNT] = cp.Problem(cp.Maximize(cp.sum(tiles)), constraints)  # type: ignore[reportUnknownMemberType]
 
         # Problem solver maximising the total value of tiles placed
         tilevalue = np.tile(
@@ -97,7 +97,8 @@ class RummikubSolver:
         if ruleset.jokers:
             tilevalue = np.append(tilevalue, 0)
         p[SolverMode.TOTAL_VALUE] = cp.Problem(
-            cp.Maximize(cp.sum(tiles @ tilevalue)), constraints
+            cp.Maximize(cp.sum(tiles @ tilevalue)),  # type: ignore[reportUnknownMemberType]
+            constraints,
         )
 
         # Problem solver used for the opening move ("initial meld").
@@ -110,7 +111,8 @@ class RummikubSolver:
             sets @ setvalue >= ruleset.min_initial_value,
         ]
         p[SolverMode.INITIAL] = cp.Problem(
-            cp.Maximize(cp.sum(numbertiles)), initial_constraints
+            cp.Maximize(cp.sum(numbertiles)),  # type: ignore[reportUnknownMemberType]
+            initial_constraints,
         )
 
         self._problems = p
@@ -132,7 +134,9 @@ class RummikubSolver:
             self.table.value = state.table_array
 
         prob = self._problems[mode]
-        value = prob.solve(solver=cp.GLPK_MI)
+        value = prob.solve(solver=cp.GLPK_MI)  # type: ignore[reportUnknownMemberType]
+        if TYPE_CHECKING:
+            assert isinstance(value, float)
         if np.isinf(value):
             # no solution for the problem (e.g. no combination of tiles on
             # the rack leads to a valid set or has enough points when opening)
@@ -141,11 +145,15 @@ class RummikubSolver:
         # convert index counts to repeated indices, as Python scalars
         # similar to what Counts.elements() produces.
         tiles = self.tiles.value
+        if TYPE_CHECKING:
+            assert tiles is not None
         (tidx,) = tiles.nonzero()
         # add 1 to the indices to get tile numbers
         selected_tiles = np.repeat(tidx + 1, tiles[tidx].astype(int)).tolist()
 
         sets = self.sets.value
+        if TYPE_CHECKING:
+            assert sets is not None
         (sidx,) = sets.nonzero()
         selected_sets = np.repeat(sidx, sets[sidx].astype(int)).tolist()
 
