@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Sequence, Sized
 from functools import cached_property
 from itertools import chain, combinations, islice, product, repeat
-from typing import Callable, Iterable, Iterator, Sequence, Sized
+from typing import Callable
 
 from .gamestate import GameState
 from .solver import RummikubSolver

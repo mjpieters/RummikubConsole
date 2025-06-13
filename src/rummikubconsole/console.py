@@ -5,11 +5,12 @@ import shelve
 import shutil
 from cmd import Cmd
 from collections import Counter
+from collections.abc import Iterable, Sequence
 from enum import Enum
 from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import click
 from platformdirs import user_data_dir

@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator, Sequence
 from enum import Enum
-from typing import TYPE_CHECKING, Iterator, NamedTuple, Sequence
+from typing import TYPE_CHECKING, NamedTuple
 
 import click
 
