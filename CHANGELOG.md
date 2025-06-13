@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated uv.lock to reflect all updates.
 - Use Python 3.9+-compatible syntax everywhere.
+- Don't ignore set indices during stage 2 placement when first coming on the table.
 
 ## [1.3.0] - 2025-06-13
 

@@ -73,7 +73,7 @@ class RuleSet:
             # available on the table to look for additional tiles to place.
             new_state = state.with_move(sol.tiles)
             stage2 = self._solver(SolverMode.TILE_COUNT, new_state)
-            if stage2.tiles:
+            if stage2.tiles or stage2.set_indices:
                 tiles = sorted([*tiles, *stage2.tiles])
                 set_indices = stage2.set_indices
 
