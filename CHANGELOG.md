@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Modernized development toolset (uv, ruff, pyright), and address the issues flagged by these tools.
 - Replaced the deprecated `appdirs` package with `platformdirs`.
+- Dropped support for Python 3.8 (EOL since 2024-10-07).
 
 ## [1.2.5] - 2024-01-04
 

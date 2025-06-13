@@ -1,14 +1,5 @@
 # SPDX-License-Identifier: MIT
-from importlib.metadata import metadata
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from importlib.metadata import PackageNotFoundError, version
-else:
-    try:  # python 3.8 and older
-        from importlib_resources import PackageNotFoundError, version
-    except ImportError:
-        from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError, metadata, version
 
 try:
     __version__ = version(__name__)

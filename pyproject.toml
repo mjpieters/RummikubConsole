@@ -1,7 +1,7 @@
 [project]
 name = "RummikubConsole"
 description = "Rummikub solver console with multi-game support and persistence."
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 
 authors = [
     {"name" = "Martijn Pieters", "email" = "mj@zopatista.com"},
