@@ -1,5 +1,7 @@
 import click
 
+from rummikubconsole.solver import MILPSolver
+
 from . import __version__
 from .console import SolverConsole
 from .ruleset import RuleSet
@@ -53,6 +55,12 @@ from .ruleset import RuleSet
     type=click.IntRange(1, 50),
     help="Minimal tile sum required as opening move",
 )
+@click.option(
+    "--solver-backend",
+    type=click.Choice(sorted(MILPSolver.supported()), case_sensitive=False),
+    help="Mixed-Integer solver to use.",
+    hidden=len(MILPSolver.supported()) == 1,
+)
 @click.version_option(__version__)
 def rsconsole(
     numbers: int = 13,
@@ -61,6 +69,7 @@ def rsconsole(
     jokers: int = 2,
     min_len: int = 3,
     min_initial_value: int = 30,
+    solver_backend: MILPSolver | None = None,
 ):
     ruleset = RuleSet(
         numbers=numbers,
@@ -69,6 +78,7 @@ def rsconsole(
         jokers=jokers,
         min_len=min_len,
         min_initial_value=min_initial_value,
+        solver_backend=solver_backend,
     )
     cmd = SolverConsole(
         ruleset=ruleset,

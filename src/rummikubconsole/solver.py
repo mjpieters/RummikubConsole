@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from enum import StrEnum
 from itertools import chain
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import cvxpy as cp
 import numpy as np
@@ -12,6 +13,51 @@ from .types import SolverMode, SolverSolution
 
 if TYPE_CHECKING:
     from .ruleset import RuleSet
+
+
+class MILPSolver(StrEnum):
+    """Mixed-integer Linear Programming solver to use"""
+
+    # OSS solvers
+    CBC = "CBC"
+    """COIN-OR (EPL-2.0), https://github.com/coin-or/CyLP"""
+
+    GLPK_MI = "GLPK_MI"
+    """GNU Linear Programming Kit (GPL-3.0-only), https://www.gnu.org/software/glpk/ (via https://pypi.org/p/cvxopt)"""
+
+    HIGHS = "HIGHS"
+    """HiGHS (MIT), https://highs.dev/ (via https://pypi.org/p/highspy)"""
+
+    SCIP = "SCIP"
+    """SCIP (Apache-2.0), https://scipopt.org/ (via https://pypi.org/p/pyscipopt)"""
+
+    SCIPY = "SCIPY"
+    """SciPy (BSD-3-Clause), https://scipy.org/, default solver (built on HiGHS)"""
+
+    # Commercial solvers
+    COPT = "COPT"
+    """COPT (LicenseRef-Commercial), https://github.com/COPT-Public/COPT-Release"""
+
+    CPLEX = "CPLEX"
+    """IBM CPLEX (LicenseRef-Commercial), https://www.ibm.com/docs/en/icos"""
+
+    GUROBI = "GUROBI"
+    """Gurobi (LicenseRef-Commercial), https://www.gurobi.com/"""
+
+    MOSEK = "MOSEK"
+    """Mosek (LicenseRef-Commercial), https://www.mosek.com/"""
+
+    XPRESS = "XPRESS"
+    """Fico XPress, (LicenseRef-Commercial), https://www.fico.com/en/products/fico-xpress-optimization"""
+
+    @classmethod
+    def supported(cls) -> set[Self]:
+        installed: set[str] = set(cp.installed_solvers())
+        return {member for member in cls if member in installed}
+
+
+# These are tried in order based on what is installed
+DEFAULT_MILP_BACKENDS = (MILPSolver.HIGHS, MILPSolver.SCIPY)
 
 
 class RummikubSolver:
@@ -31,7 +77,12 @@ class RummikubSolver:
 
     """
 
-    def __init__(self, ruleset: RuleSet) -> None:
+    def __init__(self, ruleset: RuleSet, backend: MILPSolver | None = None) -> None:
+        if backend is None:
+            supported = MILPSolver.supported()
+            backend = next(d for d in DEFAULT_MILP_BACKENDS if d in supported)
+        self.backend = backend
+
         # set membership matrix; how many copies of a given tile are present in
         # a given set. Each column is a set, each row a tile
         slen = len(ruleset.sets)
@@ -134,7 +185,7 @@ class RummikubSolver:
             self.table.value = state.table_array
 
         prob = self._problems[mode]
-        value = prob.solve(solver=cp.GLPK_MI)  # type: ignore[reportUnknownMemberType]
+        value = prob.solve(solver=self.backend)  # type: ignore[reportUnknownMemberType]
         if TYPE_CHECKING:
             assert isinstance(value, float)
         if np.isinf(value):

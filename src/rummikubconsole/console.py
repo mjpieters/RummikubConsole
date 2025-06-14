@@ -181,8 +181,15 @@ def _tile_display(tiles: Iterable[str]) -> str:
 
 class SolverConsole(Cmd):
     _shelve = None
-    intro = f"Welcome to the Rummikub Solver console, version {__version__}\n"
     prompt = BASE_PROMPT
+
+    @property
+    def intro(self) -> str:
+        return (
+            "Welcome to the Rummikub Solver console\n"
+            f"version: {__version__}\n"
+            f"backend: {self._ruleset.backend}\n"
+        )
 
     def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

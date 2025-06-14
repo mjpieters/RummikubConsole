@@ -7,7 +7,7 @@ from itertools import chain, combinations, islice, product, repeat
 from typing import Callable
 
 from .gamestate import GameState
-from .solver import RummikubSolver
+from .solver import MILPSolver, RummikubSolver
 from .types import Colours, ProposedSolution, SolverMode, TableArrangement
 
 
@@ -22,6 +22,7 @@ class RuleSet:
         jokers: int = 2,
         min_len: int = 3,
         min_initial_value: int = 30,
+        solver_backend: MILPSolver | None = None,
     ):
         self.numbers = numbers
         self.repeats = repeats
@@ -36,7 +37,12 @@ class RuleSet:
             self.tile_count += 1
             self.joker = self.tile_count
 
-        self._solver = RummikubSolver(self)
+        self._solver = RummikubSolver(self, backend=solver_backend)
+
+    @property
+    def backend(self) -> MILPSolver:
+        """The solver backend used for finding sets to place"""
+        return self._solver.backend
 
     def new_game(self) -> GameState:
         """Create a new game state for this ruleset"""
