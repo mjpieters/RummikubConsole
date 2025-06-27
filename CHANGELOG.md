@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https:/keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Extracted the solver component into a new project,
+  [`rummikub-solver`](https://mjpieters.github.io/rummikub-solver), with
+  significant improvements, documentation and full test coverage.
+- Updated game state loading to ensure existing saved games are restored using the correct, new
+  game state definition from rummikub-solver.
+- This project now requires Python 3.11 or newer.
+
 ## [1.4.0] - 2025-06-14
 
 ### Added

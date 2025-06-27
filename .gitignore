@@ -1,8 +1,7 @@
-auth/*
-.idea
 __pycache__
-*.db
-.eggs/
-Pipfile.lock
-*.egg-info/
-build/
+.cache/
+.task/
+.venv/
+dist/
+.coverage
+coverage.xml

@@ -1,10 +1,22 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import click
 
-from rummikubconsole.solver import MILPSolver
-
 from . import __version__
-from .console import SolverConsole
-from .ruleset import RuleSet
+
+if TYPE_CHECKING:
+    from rummikub_solver import MILPSolver
+
+
+def _supported_backends() -> list[MILPSolver]:
+    # If run for the very first time, with several backends installed, this call
+    # can take _significant_ time. Let the user know things are loading.
+    from rummikub_solver import MILPSolver
+
+    click.secho("Rummikub Solver console is loading...\r", nl=False, dim=True)
+    return sorted(MILPSolver.supported())
 
 
 @click.command(help="Rummikub Solver console")
@@ -12,8 +24,8 @@ from .ruleset import RuleSet
     "--numbers",
     default=13,
     show_default=True,
-    type=click.IntRange(1, 26),
-    help="Number of tiles per colour (1 - 26)",
+    type=click.IntRange(2, 26),
+    help="Number of tiles per colour (2 - 26)",
     metavar="T",
 )
 @click.option(
@@ -28,8 +40,8 @@ from .ruleset import RuleSet
     "--colours",
     default=4,
     show_default=True,
-    type=click.IntRange(1, 8),
-    help="Number of colours for the tilesets (1 - 8)",
+    type=click.IntRange(2, 8),
+    help="Number of colours for the tilesets (2 - 8)",
     metavar="C",
 )
 @click.option(
@@ -57,9 +69,9 @@ from .ruleset import RuleSet
 )
 @click.option(
     "--solver-backend",
-    type=click.Choice(sorted(MILPSolver.supported()), case_sensitive=False),
+    type=click.Choice(_supported_backends(), case_sensitive=False),
     help="Mixed-Integer solver to use.",
-    hidden=len(MILPSolver.supported()) == 1,
+    hidden=len(_supported_backends()) == 1,
 )
 @click.version_option(__version__)
 def rsconsole(
@@ -71,6 +83,10 @@ def rsconsole(
     min_initial_value: int = 30,
     solver_backend: MILPSolver | None = None,
 ):
+    from rummikub_solver import RuleSet
+
+    from ._console import SolverConsole
+
     ruleset = RuleSet(
         numbers=numbers,
         repeats=repeats,

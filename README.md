@@ -57,26 +57,9 @@ uvx --from RummikubConsole rsconsole
 
 ### Picking an alternative solver backend
 
-This program builds on [cvxpy][] to define the Rummikub models, which can then be solved using any of the [support MILP solver backends][cpsolvers]. By default, the SCIPY backend is used, which in turn uses a version of the [HiGHS optimizer][highs] that comes bundled with [SciPy][scipy].
+This program uses the [`rummikub-solver` library][rsolver] to model the Rummikub game, and this library can work with different backends. See the [library documentation](https://mjpieters.github.io/rummikub-solver/#picking-an-alternative-solver-backend) on what backends can be installed.
 
-You can also install an alternative Open Source solver backends via [extras][]:
-
-| Extra | Backend | License |   |
-| ----- | ------- | ------- | - |
-| `cbc` | [COIN-OR](https://github.com/coin-or/Cbc) Branch-and-Cut solver | [EPL-2.0][epl-20] | |
-| `glpk_mi` | [GNU Linear Programming Kit](https://www.gnu.org/software/glpk/) | [GPL-3.0-only][gpl-30-only] | Installs the [cvxopt project](https://pypi.org/p/cvxopt) |
-| `highs` | [HiGHS][highs] | [MIT][mit] | Arguably the best OSS MILP solver available. This installs a newer version of HiGHS than what is bundled with SciPy. |
-| `scip` | [SCIP](https://scipopt.org/) | [Apache-2.0][apache-20] | |
-
-You can also pick from a number of commercial solvers; no extras are provided for these:
-
-- `COPT`: Cardinal Optimizer, https://github.com/COPT-Public/COPT-Release
-- `CPLEX`: IBM CPLEX, https://www.ibm.com/docs/en/icos
-- `GUROBI`: Gurobi Optimizer, https://www.gurobi.com/
-- `MOSEK`: https://www.mosek.com/
-- `XPRESS`: Fico XPress,, https://www.fico.com/en/products/fico-xpress-optimization
-
-Refer to their respective documentations for installation instructions.
+You can install additional backends with `uv` by adding `--with rummikub-solver[EXTRA_NAME]` to the `uv tool` command-line.
 
 You can then use the `--solver-backend` switch to pick an alternative backend; when you run `rsconsole --help`, provided there are extra backends available, those that are installed will be listed:
 
@@ -88,12 +71,6 @@ $ rsconsole --help
 ```
 
 When HiGHS is installed, it is automatically used as the default solver.
-
-[scipy]: https://scipy.org/
-[epl-20]: https://spdx.org/licenses/EPL-2.0.html
-[gpl-30-only]: https://spdx.org/licenses/GPL-3.0-only.html
-[mit]: https://spdx.org/licenses/MIT.html
-[apache-20]: https://spdx.org/licenses/Apache-2.0.html
 
 ## Usage
 
@@ -117,11 +94,16 @@ to run the console solver.
 
 The initial version of the solver and console were written by [Ollie Hooper][oh].
 
-This version is a complete rewrite by [Martijn Pieters][mp], with new console implementation, expansion of the solver to improve performance and address shortcomings in the original paper, as well as multi-game, game state tracking and persistence support. 
+This version is a complete rewrite by [Martijn Pieters][mp], with new console
+implementation, expansion of the solver to improve performance and address
+shortcomings in the original paper, as well as multi-game, game state tracking
+and persistence support. The solver part has since been spun off into a
+[standalone library][rsolver].
 
 [screenshot]: https://raw.githubusercontent.com/mjpieters/RummikubConsole/master/screenshot.png
 [pipx]: https://pipxproject.github.io/
 [uv]: https://docs.astral.sh/uv/
+[rsolver]: https://mjpieters.github.io/rummikub-solver
 [gh]: https://github.com/mjpieters/RummikubSolver
 [oh]: https://github.com/Ollie-Hooper
 [mp]: https://www.zopatista.com

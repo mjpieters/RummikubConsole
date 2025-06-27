@@ -1,0 +1,148 @@
+name: Python checks
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [v*]
+  pull_request:
+  merge_group:
+
+env:
+  FORCE_COLOR: 1
+
+permissions:
+  contents: read
+
+jobs:
+  linting:
+    runs-on: ubuntu-latest
+    name: "Python linting"
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+
+    - name: Set up Python 🐍
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version-file: "pyproject.toml"
+    
+    - name: Check lock is up-to-date
+      run: |
+        uv lock --check
+
+    - name: Install dependencies
+      run: |
+        uv sync
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
+    - name: Check file formatting
+      uses: astral-sh/ruff-action@eaf0ecdd668ceea36159ff9d91882c9795d89b49 # v3.4.0
+      with:
+        args: "format --check"
+
+    - name: Lint with ruff
+      env:
+        RUFF_OUTPUT_FORMAT: github
+      run: |
+        ruff check
+
+    - name: Typecheck with pyright
+      uses: jakebailey/pyright-action@b5d50e5cde6547546a5c4ac92e416a8c2c1a1dfe # v2.3.2
+      with:
+        version: PATH
+
+  build:
+    name: Build distribution 📦
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs:
+      - linting
+
+    outputs:
+      version: ${{ steps.note.outputs.version }}
+      prerelease: ${{ steps.note.outputs.prerelease }}
+
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+
+    - name: Set up Python 🐍
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version-file: "pyproject.toml"
+
+    - name: Install dependencies
+      run: |
+        uv sync
+
+    - name: Build the Python 🐍 binary wheel and source tarball 📦
+      id: build-dist
+      run: |
+        uv build
+        rm -f dist/.gitignore  # get-releasenotes can't handle non-dist files here
+        echo "version=$(uvx hatch version)" >> $GITHUB_OUTPUT
+
+    - name: Check build
+      run: uvx twine check --strict dist/*
+
+    - name: Prepare Release Note
+      id: note
+      uses: aio-libs/get-releasenote@b0fcc7f3e5f5cc7c8b01e2f75516b1732f6bd8b2 # v1.4.5
+      with:
+        changes_file: CHANGELOG.md
+        output_file: release_notes.md
+        version: ${{ steps.build-dist.outputs.version }}
+        start_line: '<!-- changes go below this line -->'
+        head_line: '## \[{version}\] - {date}'
+        name: Rummikub Solver library
+        dist_dir: dist
+
+    - name: Store the Python 🐍 distribution 📦
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: python-package-distributions
+        path: |
+          dist/
+          release_notes.md
+
+  pypi-publish:
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs:
+      - build
+    environment:
+      name: pypi
+      url: https://pypi.org/p/rummikub-solver
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+      contents: write  # required for creating GH releases
+
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+    - name: Download Python 🐍 distribution 📦
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: python-package-distributions
+
+    - name: Publish Python 🐍 distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+
+    - name: GitHub release
+      uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # v1.16.0
+      with:
+        name: Rummikub Solver library ${{ needs.build.outputs.version }}
+        bodyFile: release_notes.md
+        artifacts: dist/*
+        prerelease: ${{ needs.build.outputs.prerelease }}

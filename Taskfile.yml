@@ -1,0 +1,142 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  PROJECT_NAME: "RummikubConsole"
+  _NORMALISED_NAME: '{{.PROJECT_NAME | replace "-" "_" | lower |}}'
+
+tasks:
+  # utility tasks
+  util:check_uv:
+    desc: Check that UV is installed and print its version
+    internal: true
+    run: once
+    preconditions:
+      - sh: type "uv" &>/dev/null
+        msg: Please install uv, see https://docs.astral.sh/uv/getting-started/installation/
+    cmds:
+      - uv --version
+  
+  # development
+  dev:install-precommit:
+    desc: Install pre-commit into local git checkout
+    run: once
+    status:
+      - grep -q 'pre-commit\.com' .git/hooks/*
+    cmds:
+      - uv run pre-commit install
+
+  dev:lint:renovate:
+    desc: Lint the Renovate configuration file
+    sources:
+      - .github/renovate.json
+    deps:
+      - dev:install-precommit
+    cmds:
+      - pre-commit run --files .github/renovate.json renovate-config-validator
+
+  dev:lint:code:
+    desc: Lint the source code
+    run: always
+    deps: [util:check_uv]
+    preconditions:
+      - |
+        uv lock --locked || {
+          echo -e '\033[0;31mThe lockfile at `uv.lock` needs to be updated. To update the lockfile, run `task lock`\033[0m'.
+          exit 1
+        } >&2
+    cmds:
+      - uv run ruff format --check
+      - uv run ruff check {{.CLI_ARGS}}
+      - uv run pyright
+
+  dev:lint:
+    aliases:
+      - lint
+    desc: Runs linters
+    deps:
+      - dev:lint:code
+      - dev:lint:renovate
+
+  dev:format:
+    aliases:
+      - format
+    desc: Runs formatters
+    sources:
+      - pyproject.toml
+      - src/**
+      - tests/**
+    cmds:
+      - uv run ruff format {{.CLI_ARGS}}
+
+  dev:uv-lock:
+    aliases:
+      - lock
+    desc: Updates the uv lock file
+    deps: [util:check_uv]
+    sources:
+      - pyproject.toml
+    generates:
+      - pyproject.toml
+      - uv.lock
+    cmds:
+      - uv lock
+
+  # packaging
+  dist:build:
+    aliases:
+      - dist
+    desc: Build the distribution packages
+    deps: [util:check_uv]
+    sources:
+      - uv.lock
+      - pyproject.toml
+      - README.md
+      - LICENSE.txt
+      - src/**
+    generates:
+      - dist/{{._NORMALISED_NAME}}-*.tar.gz
+      - dist/{{._NORMALISED_NAME}}-*-py3-none-any.whl
+    status:
+      - test dist/{{._NORMALISED_NAME}}-$(uvx hatch version).tar.gz
+      - test dist/{{._NORMALISED_NAME}}-$(uvx hatch version)-py3-none-any.whl
+    env:
+      UV_NO_SYNC: 1
+      UV_FROZEN: 1
+    cmds:
+      - |
+        echo 'Building distribution packages for {{.PROJECT_NAME}}'
+        uv build {{.CLI_ARGS}}
+
+  dist:clean:
+    aliases:
+      - clean
+    desc: Remove built distribution packages
+    dir: dist/
+    sources:
+      - '{{._NORMALISED_NAME}}-*.tar.gz'
+      - '{{._NORMALISED_NAME}}-*-py3-none-any.whl'
+    cmds:
+      - for: sources
+        cmd: rm {{.ITEM}}
+
+  dist:publish:
+    aliases:
+      - publish
+    desc: Publish package to PyPI
+    deps: [util:check_uv, dist:build]
+    env:
+      UV_NO_SYNC: 1
+      UV_FROZEN: 1
+    cmds:
+      - |
+        LIB_VERSION=$(uvx hatch version)
+        echo "Publishing distribution packages for {{.PROJECT_NAME}}, version ${LIB_VERSION}"
+        uvx twine check "dist/{{._NORMALISED_NAME}}-${LIB_VERSION}.tar.gz" "dist/{{._NORMALISED_NAME}}-${LIB_VERSION}-py3-none-any.whl"
+        uv publish {{.CLI_ARGS}}
+
+  default:
+    desc: Default task, runs linters
+    deps:
+      - dev:lint

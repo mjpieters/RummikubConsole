@@ -5,20 +5,20 @@ import shelve
 import shutil
 from cmd import Cmd
 from collections import Counter
-from collections.abc import Iterable, Sequence
-from enum import Enum
+from collections.abc import Callable, Sequence
 from itertools import chain, islice
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 from platformdirs import user_data_dir
+from rummikub_solver import GameState, Number, RuleSet, SolverMode, Tile
 
 from . import __author__, __project__, __version__
-from .gamestate import GameState
-from .ruleset import RuleSet
-from .types import Colours, SolverMode, expand_tileref
+from ._tile_source import TileSource
+from ._types import Colour
+from ._utils import fixed_completer, tile_display
 
 try:
     import readline
@@ -29,14 +29,9 @@ except ImportError:
     readline = None
 
 
-if TYPE_CHECKING:
-    CompleterMethod = Callable[[Any, str, str, int, int], Sequence[str]]
-
-
 SAVEPATH = Path(user_data_dir(__project__, __author__))
 
-
-JOKER = Colours.joker.value
+JOKER = Colour.joker.value
 BASE_PROMPT = "(rsconsole) "
 CURRENT = "__current_game__"
 DEFAULT_NAME = "default"
@@ -49,134 +44,9 @@ GAME_OPEN = (
     N1 + click.style(N2 + "\N{BALLOT BOX WITH CHECK}" + N1, fg="bright_green") + N2
 )
 
-
-class TileSource(Enum):
-    """Where to check for available tiles"""
-
-    NOT_PLAYED = 0  # tiles not on the table or on your rack
-    RACK = 1
-    TABLE = 2
-
-    @property
-    def tile_completer(self) -> CompleterMethod:
-        """Create a completer for a given tile source"""
-
-        def completer(
-            console: SolverConsole, text: str, line: str, begidx: int, endidx: int
-        ) -> Sequence[str]:
-            """Complete tile names, but only those that are still available to place"""
-            _, *args = (line[:begidx] + line[endidx:]).split()
-            # expand groups and runs first
-            args = chain.from_iterable(expand_tileref(arg) for arg in args)
-            tmap, rmap = console._tile_map, console._r_tile_map  # type: ignore[privateUsage]
-            avail = self.available(console) - Counter(
-                tmap[a] for a in args if a in tmap
-            )
-
-            # if completing a valid tile plus dash, offer all possible
-            # tile numbers that could make it a run
-            if (
-                text[:1] != JOKER
-                and len(parts := text.split("-")) == 2
-                and (t := tmap.get(parts[0])) in avail
-            ):
-                if TYPE_CHECKING:
-                    assert t is not None
-                n = console._ruleset.numbers  # type: ignore[privateUsage]
-                c = (t - 1) // n
-                opts = (
-                    f"{parts[0]}-{rmap[a][1:]}"
-                    for a in avail
-                    if a > t and (a - 1) // n == c
-                )
-                return [opt for opt in opts if opt.startswith(text)]
-
-            # alternative options in addition to the main tile names
-            options: list[str] = []
-            if tmap.get(text) in avail:
-                # if text is an available tile, offer a dash to create a run
-                options.append(f"{text}-")
-
-            elif all(Colours(t) for t in text):
-                # if text consists entirely of colour letters, offer the other colours
-                # to form a group
-                colours = sorted(
-                    {c for t in avail if (c := rmap[t][0]) not in text and c != JOKER}
-                )
-                options += (f"{text}{c}" for c in colours)
-
-            return options + [
-                n for t, c in avail.items() if c and (n := rmap[t]).startswith(text)
-            ]
-
-        return completer
-
-    def available(self, console: SolverConsole) -> Counter[int]:
-        game = console.game
-        if self is TileSource.RACK:
-            return game.rack.copy()
-        elif self is TileSource.TABLE:
-            return game.table.copy()
-        # NOT_PLAYED
-        ruleset = console._ruleset  # type: ignore[privateUsage]
-        repeats, jokers = ruleset.repeats, ruleset.jokers
-        counts = Counter({t: repeats for t in ruleset.tiles})
-        if jokers and jokers != repeats:
-            counts[console._tile_map[JOKER]] = jokers  # type: ignore[privateUsage]
-        counts -= game.table + game.rack
-        return counts
-
-    def parse_tiles(self, console: SolverConsole, args: str) -> Sequence[int]:
-        avail = self.available(console)
-        tiles: list[int] = []
-        for arg in args.split():
-            for tile in expand_tileref(arg):
-                t = console._tile_map.get(tile)  # type: ignore[privateUsage]
-                if t is None:
-                    console.error("Ignoring invalid tile:", tile)
-                    continue
-                if not avail[t]:
-                    console.error(f"No {tile} tile available.")
-                    continue
-                avail[t] -= 1
-                tiles.append(t)
-        return tiles
-
-
-def _fixed_completer(*options: str, case_insensitive: bool = False) -> CompleterMethod:
-    """Generate a completer for a fixed number of arguments"""
-
-    def completer(
-        self: SolverConsole, text: str, line: str, begidx: int, endidx: int
-    ) -> Sequence[str]:
-        if case_insensitive:
-            text = text.lower()
-        return [opt for opt in options if opt.startswith(text)]
-
-    return completer
-
-
-def _tile_display(tiles: Iterable[str]) -> str:
-    """Format a sequence of tiles into columns
-
-    Takes into account terminal width, and adds ANSI colours to the tiles
-    displayed. A 2-space indent is added to all lines.
-
-    """
-    width = shutil.get_terminal_size()[0] - 4  # 2 space indent, 2 spaces margin
-    if width < 3:  # obviously too narrow for even a single tile, ignore
-        width = 76
-    line: list[str] = []
-    lines, used = [line], 0
-    for tile in tiles:
-        tl = len(tile) + 2  # includes comma and space
-        if used + tl - 1 >= width:  # do not count a space at the end
-            # start a new line
-            used, line = 0, []
-            lines.append(line)
-        line.append(Colours.c(tile))
-        used += tl
-    return "  " + ",\n  ".join([", ".join(ln) for ln in lines])
+# reference empty game, used for migrating shelve data from older
+# RummikubConsole releases.
+current_ruleset_empty_game: GameState
 
 
 class SolverConsole(Cmd):
@@ -194,8 +64,21 @@ class SolverConsole(Cmd):
     def __init__(self, *args: Any, ruleset: RuleSet, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._shelve_path = SAVEPATH / f"games_{ruleset.game_state_key}"
-        self._tile_map, self._r_tile_map = ruleset.create_tile_maps()
         self._ruleset = ruleset
+        self._tile_map, self._r_tile_map = self._tile_maps()
+
+    def _tile_maps(self) -> tuple[dict[str, Tile], dict[Tile, str]]:
+        tiles = self._ruleset.tiles
+        nums = cast(Sequence[Number], tiles)
+        jokers = self._ruleset.jokers
+        if jokers:
+            *nums, _ = nums
+        names = [f"{Colour.from_ruleset(t.colour).value}{t.value}" for t in nums]
+        if jokers:
+            names.append(Colour.joker.value)
+        return dict(zip(names, tiles, strict=False)), dict(
+            zip(tiles, names, strict=False)
+        )
 
     if not has_readline:
         if not TYPE_CHECKING:
@@ -204,9 +87,7 @@ class SolverConsole(Cmd):
         if TYPE_CHECKING:
             assert readline is not None
 
-        complete_confirm = _fixed_completer(
-            "n", "no", "y", "yes", case_insensitive=True
-        )
+        complete_confirm = fixed_completer("n", "no", "y", "yes", case_insensitive=True)
 
         def confirm(self, text: str, default: bool = False) -> bool:
             """Confirm some action, with appropriate readline handling"""
@@ -253,7 +134,7 @@ class SolverConsole(Cmd):
         if self._shelve is None:
             self._shelve_path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                self._shelve = shelve.open(str(self._shelve_path), writeback=True)  # noqa: SIM115
+                self._shelve = shelve.open(str(self._shelve_path), writeback=True)
             except OSError:
                 click.get_current_context().fail(
                     "Failed to open storage, can't be opened more than once"
@@ -290,7 +171,14 @@ class SolverConsole(Cmd):
 
     @property
     def game(self) -> GameState:
-        return self._games[self._current_game]
+        # make an empty game state available for shelve data migrations
+        global current_ruleset_empty_game
+        current_ruleset_empty_game = self._ruleset.new_game()
+
+        try:
+            return self._games[self._current_game]
+        finally:
+            del current_ruleset_empty_game
 
     def message(
         self, *msg: object, wrap: bool = False, perhaps_paged: bool = False
@@ -443,12 +331,12 @@ class SolverConsole(Cmd):
         game = self.game
         if arg in {"", "table"}:
             # pass in a copy, to avoid modifying the same list in-place
-            game.remove_table(game.sorted_table)
+            game.remove_table(*game.sorted_table)
         if arg in {"", "rack"}:
             # pass in a copy, to avoid modifying the same list in-place
-            game.remove_rack(game.sorted_rack)
+            game.remove_rack(*game.sorted_rack)
 
-    complete_clear = _fixed_completer("table", "rack")
+    complete_clear = fixed_completer("table", "rack")
 
     def do_reset(self, arg: str) -> None:
         """reset
@@ -490,7 +378,7 @@ class SolverConsole(Cmd):
             self.message("Set initial state")
         self._update_prompt()
 
-    complete_initial = _fixed_completer("clear", "set")
+    complete_initial = fixed_completer("clear", "set")
 
     def do_rack(self, arg: str) -> None:
         """rack | r
@@ -498,12 +386,12 @@ class SolverConsole(Cmd):
         """
         tiles = [self._r_tile_map[t] for t in self.game.sorted_rack]
         self.message("Your rack:")
-        self.message(_tile_display(tiles))
+        self.message(tile_display(tiles))
         counts = Counter(t[0] for t in tiles)
         self.message(
             len(tiles),
             "tiles on rack:",
-            ", ".join([Colours.c(f"{ct}{c}", c) for c, ct in counts.items()]),
+            ", ".join([Colour.c(f"{ct}{c}", c) for c, ct in counts.items()]),
         )
 
     do_r = do_rack
@@ -514,12 +402,12 @@ class SolverConsole(Cmd):
         """
         tiles = [self._r_tile_map[t] for t in self.game.sorted_table]
         self.message("On the table:")
-        self.message(_tile_display(tiles))
+        self.message(tile_display(tiles))
         counts = Counter(t[0] for t in tiles)
         self.message(
             len(tiles),
             "tiles on table:",
-            ", ".join([Colours.c(f"{ct}{c}", c) for c, ct in counts.items()]),
+            ", ".join([Colour.c(f"{ct}{c}", c) for c, ct in counts.items()]),
         )
 
     do_t = do_table
@@ -530,7 +418,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.NOT_PLAYED.parse_tiles(self, arg)
         if tiles:
-            self.game.add_rack(tiles)
+            self.game.add_rack(*tiles)
             self.message("Added tiles to your rack")
 
     do_ar = do_addrack
@@ -543,7 +431,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.RACK.parse_tiles(self, arg)
         if tiles:
-            self.game.remove_rack(tiles)
+            self.game.remove_rack(*tiles)
             self.message("Removed tiles from rack")
 
     do_rr = do_removerack
@@ -556,7 +444,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.NOT_PLAYED.parse_tiles(self, arg)
         if tiles:
-            self.game.add_table(tiles)
+            self.game.add_table(*tiles)
             self.message("Added tiles to the table")
 
     do_at = do_addtable
@@ -569,7 +457,7 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.TABLE.parse_tiles(self, arg)
         if tiles:
-            self.game.remove_table(tiles)
+            self.game.remove_table(*tiles)
             self.message("Removed tiles from the table")
 
     do_rt = do_removetable
@@ -582,8 +470,8 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.RACK.parse_tiles(self, arg)
         if tiles:
-            self.game.remove_rack(tiles)
-            self.game.add_table(tiles)
+            self.game.remove_rack(*tiles)
+            self.game.add_table(*tiles)
             self.message("Placed tiles from your rack onto the table")
 
     do_r2t = do_place
@@ -596,8 +484,8 @@ class SolverConsole(Cmd):
         """
         tiles = TileSource.TABLE.parse_tiles(self, arg)
         if tiles:
-            self.game.remove_table(tiles)
-            self.game.add_rack(tiles)
+            self.game.remove_table(*tiles)
+            self.game.add_rack(*tiles)
             self.message("Taken tiles from the table and placed on your rack")
 
     do_t2r = do_remove
@@ -628,16 +516,16 @@ class SolverConsole(Cmd):
             return False
 
         self.message("Using the following tiles from your rack:")
-        self.message(_tile_display(self._r_tile_map[t] for t in sol.tiles))
+        self.message(tile_display(self._r_tile_map[t] for t in sol.tiles))
         self.message("Make the following sets:")
         for s in sol.sets:
-            self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
+            self.message(" ", ", ".join([Colour.c(self._r_tile_map[t]) for t in s]))
 
         if self.confirm(
             "Automatically place tiles for selected solution?", default=True
         ):
-            game.remove_rack(sol.tiles)
-            game.add_table(sol.tiles)
+            game.remove_rack(*sol.tiles)
+            game.add_table(*sol.tiles)
             if game.initial:
                 game.initial = False
                 self._update_prompt()
@@ -647,7 +535,7 @@ class SolverConsole(Cmd):
         return False
 
     emptyline = do_solve
-    complete_solve = _fixed_completer("tiles", "value", "initial")
+    complete_solve = fixed_completer("tiles", "value", "initial")
 
     def do_check(self, arg: str) -> None:
         """check
@@ -671,9 +559,9 @@ class SolverConsole(Cmd):
 
         self.message("Possible table arrangement:")
         for s in arr.sets:
-            self.message(" ", ", ".join([Colours.c(self._r_tile_map[t]) for t in s]))
+            self.message(" ", ", ".join([Colour.c(self._r_tile_map[t]) for t in s]))
         if arr.free_jokers:
-            jokers = ", ".join([Colours.c(JOKER)] * arr.free_jokers)
+            jokers = ", ".join([Colour.c(JOKER)] * arr.free_jokers)
             self.message(click.style(f"Free jokers: {jokers}", fg="bright_green"))
 
     def do_stop(self, arg: str) -> bool:
@@ -708,13 +596,15 @@ class SolverConsole(Cmd):
 
             The solver has been improved by removing sets where the joker is
             "surplus" (freely removable) when considering solutions, and has
-            a dedicated solver configuration for opening plays.
+            a dedicated solver configuration for opening plays. The solver
+            is available as a stand-alone Python library, `rummikub_solver`,
+            see https://mjpieters.github.io/rummikub_solver.
             """
         )
         self.message(help_text, wrap=True, perhaps_paged=True)
 
     def help_tiles(self) -> None:
-        cols = chain(islice(Colours, self._ruleset.colours), (Colours.joker,))
+        cols = chain(islice(Colour, self._ruleset.colours), (Colour.joker,))
         width = shutil.get_terminal_size()[0]
         # there is no easy option to rewrap text _with ANSI escapes_, so
         # rewrap text in sections.
