@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Autocompletion for tiles now include available group numbers; e.g. `br`
+  `<TAB>` might suggest `o` and `2` if you have blue. red and orange number 2
+  tiles available to pick from.
+
 ### Changed
 
 - Extracted the solver component into a new project,

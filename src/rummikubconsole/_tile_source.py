@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections import Counter
 from enum import Enum
-from itertools import chain
+from itertools import chain, groupby
 from typing import TYPE_CHECKING
 
-from rummikub_solver import Tile
+from rummikub_solver import Number, Tile
 
 from ._types import Colour, CompleterMethod
 from ._utils import expand_tileref
@@ -66,11 +66,25 @@ class TileSource(Enum):
 
             elif all(Colour(t) for t in text):
                 # if text consists entirely of colour letters, offer the other colours
-                # to form a group
-                colours = sorted(
-                    {c for t in avail if (c := rmap[t][0]) not in text and c != JOKER}
-                )
-                options += (f"{text}{c}" for c in colours)
+                # and numbers to form any of the possible groups
+                by_num: dict[frozenset[str], list[int]] = {}
+                for number, tiles in groupby(
+                    (t for t in avail if isinstance(t, Number)), lambda n: n.value
+                ):
+                    by_num.setdefault(frozenset(rmap[t][0] for t in tiles), []).append(
+                        number
+                    )
+                used = frozenset(text)
+                colours = {
+                    c for grp, _ in by_num.items() if used < grp for c in (grp - used)
+                }
+                numbers = {
+                    str(num)
+                    for grp, nums in by_num.items()
+                    if used <= grp
+                    for num in nums
+                }
+                options += (f"{text}{c}" for c in sorted(colours | numbers))
 
             return options + [
                 n for t, c in avail.items() if c and (n := rmap[t]).startswith(text)
