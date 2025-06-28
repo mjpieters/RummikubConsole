@@ -104,7 +104,7 @@ jobs:
         version: ${{ steps.build-dist.outputs.version }}
         start_line: '<!-- changes go below this line -->'
         head_line: '## \[{version}\] - {date}'
-        name: Rummikub Solver library
+        name: Rummikub Console
         dist_dir: dist
 
     - name: Store the Python 🐍 distribution 📦
@@ -123,7 +123,7 @@ jobs:
       - build
     environment:
       name: pypi
-      url: https://pypi.org/p/rummikub-solver
+      url: https://pypi.org/p/RummikubConsole
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
       contents: write  # required for creating GH releases
@@ -142,7 +142,7 @@ jobs:
     - name: GitHub release
       uses: ncipollo/release-action@bcfe5470707e8832e12347755757cec0eb3c22af # v1.18.0
       with:
-        name: Rummikub Solver library ${{ needs.build.outputs.version }}
+        name: Rummikub Console ${{ needs.build.outputs.version }}
         bodyFile: release_notes.md
         artifacts: dist/*
         prerelease: ${{ needs.build.outputs.prerelease }}
