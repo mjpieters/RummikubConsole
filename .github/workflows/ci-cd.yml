@@ -42,7 +42,7 @@ jobs:
         # can't use "python-version-file: pyproject.toml" because that'd lead to
         # running with newer Python releases than some packages in our
         # dependency tree can support.
-        python-version: 3.13
+        python-version: 3.14
 
     - name: Check lock is up-to-date
       run: |
@@ -98,7 +98,7 @@ jobs:
         # can't use "python-version-file: pyproject.toml" because that'd lead to
         # running with newer Python releases than some packages in our
         # dependency tree can support.
-        python-version: 3.13
+        python-version: 3.14
 
     - name: Install dependencies
       run: |
