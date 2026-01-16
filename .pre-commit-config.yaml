@@ -5,25 +5,25 @@ default_install_hook_types:
   - post-rewrite
 repos:
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.9.7
+  rev: 0.9.26
   hooks:
   - id: uv-lock
   - id: uv-sync
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.14.3
+  rev: v0.14.13
   hooks:
   - id: ruff-format
   - id: ruff-check
 - repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.407
+  rev: v1.1.408
   hooks:
   - id: pyright
 - repo: https://github.com/renovatebot/pre-commit-hooks
-  rev: 41.167.0
+  rev: 41.173.1
   hooks:
   - id: renovate-config-validator
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.20.0
+  rev: v1.21.0
   hooks:
   - id: zizmor
 - repo: https://github.com/rhysd/actionlint
