@@ -7,13 +7,13 @@ repos:
 - repo: https://github.com/astral-sh/uv-pre-commit
   rev: 0.9.7
   hooks:
-    - id: uv-lock
-    - id: uv-sync
+  - id: uv-lock
+  - id: uv-sync
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.14.3
   hooks:
-    - id: ruff-format
-    - id: ruff-check
+  - id: ruff-format
+  - id: ruff-check
 - repo: https://github.com/RobertCraigie/pyright-python
   rev: v1.1.407
   hooks:
@@ -21,4 +21,12 @@ repos:
 - repo: https://github.com/renovatebot/pre-commit-hooks
   rev: 41.167.0
   hooks:
-    - id: renovate-config-validator
+  - id: renovate-config-validator
+- repo: https://github.com/zizmorcore/zizmor-pre-commit
+  rev: v1.20.0
+  hooks:
+  - id: zizmor
+- repo: https://github.com/rhysd/actionlint
+  rev: v1.7.10
+  hooks:
+  - id: actionlint

@@ -9,28 +9,41 @@ on:
 
 env:
   FORCE_COLOR: 1
+  UV_FROZEN: true
 
-permissions:
-  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
 
 jobs:
   linting:
     runs-on: ubuntu-latest
     name: "Python linting"
+    permissions:
+      contents: read
+
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
 
     - name: Install uv
       uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
       with:
-        enable-cache: true
+        enable-cache: | # zizmor: ignore[cache-poisoning] cache is disabled when publishing to prevent poisoning
+          ${{ github.ref_type == 'tag' && 'false' || 'auto' }}
         cache-dependency-glob: "uv.lock"
 
     - name: Set up Python 🐍
       uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
       with:
-        python-version-file: "pyproject.toml"
-    
+        # can't use "python-version-file: pyproject.toml" because that'd lead to
+        # running with newer Python releases than some packages in our
+        # dependency tree can support.
+        python-version: 3.13
+
     - name: Check lock is up-to-date
       run: |
         uv lock --check
@@ -38,7 +51,7 @@ jobs:
     - name: Install dependencies
       run: |
         uv sync
-        echo "$PWD/.venv/bin" >> $GITHUB_PATH
+        echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
     - name: Check file formatting
       uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1 # v3.5.1
@@ -69,17 +82,23 @@ jobs:
 
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
 
     - name: Install uv
       uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
       with:
-        enable-cache: true
+        enable-cache: | # zizmor: ignore[cache-poisoning] cache is disabled when publishing to prevent poisoning
+          ${{ github.ref_type == 'tag' && 'false' || 'auto' }}
         cache-dependency-glob: "uv.lock"
 
     - name: Set up Python 🐍
       uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
       with:
-        python-version-file: "pyproject.toml"
+        # can't use "python-version-file: pyproject.toml" because that'd lead to
+        # running with newer Python releases than some packages in our
+        # dependency tree can support.
+        python-version: 3.13
 
     - name: Install dependencies
       run: |
@@ -90,7 +109,7 @@ jobs:
       run: |
         uv build
         rm -f dist/.gitignore  # get-releasenotes can't handle non-dist files here
-        echo "version=$(uvx hatch version)" >> $GITHUB_OUTPUT
+        echo "version=$(uvx hatch version)" >> "$GITHUB_OUTPUT"
 
     - name: Check build
       run: uvx twine check --strict dist/*
@@ -130,6 +149,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
 
     - name: Download Python 🐍 distribution 📦
       uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
