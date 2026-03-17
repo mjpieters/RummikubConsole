@@ -148,9 +148,6 @@ jobs:
       contents: write  # required for creating GH releases
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-        persist-credentials: false
 
     - name: Download Python 🐍 distribution 📦
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -161,9 +158,9 @@ jobs:
       uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
 
     - name: GitHub release
-      uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
-      with:
-        name: Rummikub Console ${{ needs.build.outputs.version }}
-        bodyFile: release_notes.md
-        artifacts: dist/*
-        prerelease: ${{ needs.build.outputs.prerelease }}
+      env:
+        RELEASE_TITLE: Rummikub Console ${{ needs.build.outputs.version }}
+        PRERELEASE_SWITCH: ${{ case(fromJSON(needs.build.outputs.prerelease), '--prerelease', '') }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_REPO: ${{ github.repository }}
+      run: gh release create --title "${RELEASE_TITLE}" --notes-file release_notes.md "${PRERELEASE_SWITCH}" "${GITHUB_REF_NAME}" dist/*
