@@ -32,7 +32,7 @@ dynamic = ["version"]
 
 [dependency-groups]
 dev = [
-    "ruff",
+    "ruff>=0.16.0",
     "pyright",
 ]
 
@@ -53,14 +53,6 @@ source = "uv-dynamic-versioning"
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
-
-[tool.ruff.lint]
-extend-select = [
-    "B",    # bugbear
-    "I",    # isort
-    "UP",   # pyupgrade
-    "RUF",  # additional ruff rules
-]
 
 [tool.pyright]
 pythonVersion = "3.11"
