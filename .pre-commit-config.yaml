@@ -10,9 +10,10 @@ repos:
   - id: uv-lock
   - id: uv-sync
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.15.22
+  rev: v0.16.0
   hooks:
   - id: ruff-format
+    types_or: [python, pyi, jupyter, markdown]
   - id: ruff-check
 - repo: https://github.com/RobertCraigie/pyright-python
   rev: v1.1.411

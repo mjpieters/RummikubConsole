@@ -134,7 +134,7 @@ class SolverConsole(Cmd):
         if self._shelve is None:
             self._shelve_path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                self._shelve = shelve.open(str(self._shelve_path), writeback=True)
+                self._shelve = shelve.open(str(self._shelve_path), writeback=True)  # noqa: SIM115
             except OSError:
                 click.get_current_context().fail(
                     "Failed to open storage, can't be opened more than once"
@@ -608,7 +608,7 @@ class SolverConsole(Cmd):
         width = shutil.get_terminal_size()[0]
         # there is no easy option to rewrap text _with ANSI escapes_, so
         # rewrap text in sections.
-        dedent_and_wrap: Callable[[str], str] = lambda t: click.wrap_text(  # noqa: E731
+        dedent_and_wrap: Callable[[str], str] = lambda t: click.wrap_text(
             dedent(t), width=width, preserve_paragraphs=True
         )
         help_text = "\n\n".join(
